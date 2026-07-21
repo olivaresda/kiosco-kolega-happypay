@@ -61,10 +61,13 @@ const {
 const ADMIN_PIN_DEFAULT = "254800";
 const PROXY_URL = "https://lllyjmnbgegbbetgrmvq.supabase.co/functions/v1/chat";
 const PROXY_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxsbHlqbW5iZ2VnYmJldGdybXZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ2NDA4MjIsImV4cCI6MjEwMDIxNjgyMn0.LiKzwHYLgSUZxpe06n4U6OqPErkEN2JRVGULedeSCk8";
-
-// Foto de Kolega (figura humana). Se puede reemplazar aquí (data URI o URL) o desde el panel admin.
+const SUPA_BASE = "https://lllyjmnbgegbbetgrmvq.supabase.co";
+const SUPA_REST = SUPA_BASE + "/rest/v1";
 const KOLEGA_PHOTO = "";
-const SUPA_REST = "https://lllyjmnbgegbbetgrmvq.supabase.co/rest/v1";
+const DID_VOICE = {
+  type: "microsoft",
+  voice_id: "es-MX-JorgeNeural"
+};
 async function loadKolegaPhoto() {
   try {
     const r = await fetch(`${SUPA_REST}/app_config?id=eq.1&select=kolega_photo`, {
@@ -80,7 +83,7 @@ async function loadKolegaPhoto() {
     return null;
   }
 }
-async function saveKolegaPhoto(dataUri) {
+async function saveKolegaPhoto(url) {
   try {
     await fetch(`${SUPA_REST}/app_config?id=eq.1`, {
       method: "PATCH",
@@ -91,10 +94,53 @@ async function saveKolegaPhoto(dataUri) {
         Prefer: "return=minimal"
       },
       body: JSON.stringify({
-        kolega_photo: dataUri
+        kolega_photo: url
       })
     });
   } catch (e) {}
+}
+async function uploadAvatarToStorage(file) {
+  const ext = (file.name && file.name.split(".").pop() || "png").toLowerCase();
+  const path = "kolega-" + Date.now() + "." + ext;
+  const r = await fetch(`${SUPA_BASE}/storage/v1/object/avatars/${path}`, {
+    method: "POST",
+    headers: {
+      apikey: PROXY_KEY,
+      authorization: "Bearer " + PROXY_KEY,
+      "content-type": file.type || "image/png",
+      "x-upsert": "true"
+    },
+    body: file
+  });
+  if (!r.ok) throw new Error("subida " + r.status);
+  return `${SUPA_BASE}/storage/v1/object/public/avatars/${path}`;
+}
+
+// Llamada a D-ID a través del proxy (la key vive en el servidor)
+async function didCall(path, method, payload) {
+  const r = await fetch(PROXY_URL, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      apikey: PROXY_KEY,
+      authorization: "Bearer " + PROXY_KEY
+    },
+    body: JSON.stringify({
+      __did: {
+        path,
+        method,
+        payload
+      }
+    })
+  });
+  let data = {};
+  try {
+    data = await r.json();
+  } catch (e) {}
+  return {
+    status: r.status,
+    data
+  };
 }
 const DEFAULT_POLICIES = {
   precio_minimo_usd: 100,
@@ -289,7 +335,7 @@ async function runBrainTurn(history, systemPrompt, policies, apiKey) {
   };
 }
 
-/* ============================== AVATAR (figura humana / foto) ============================== */
+/* ============================== AVATAR (foto / video) ============================== */
 
 function SilhouetteAdult() {
   return /*#__PURE__*/React.createElement("svg", {
@@ -321,36 +367,17 @@ function SilhouetteAdult() {
     d: "M40,190 C40,140 70,120 100,120 C130,120 160,140 160,190 Z"
   })));
 }
-function Avatar({
-  state,
+
+// Avatar sencillo (foto/silueta) para el botón flotante
+function AvatarMini({
   photoUrl,
   size
 }) {
-  const listening = state === "escuchando";
-  const thinking = state === "pensando";
-  const speaking = state === "hablando";
-  const ringColor = listening ? "#F97316" : speaking ? "#22C55E" : thinking ? "#F59E0B" : "rgba(15,23,42,.12)";
-  const active = listening || speaking || thinking;
   return /*#__PURE__*/React.createElement("div", {
-    className: "relative flex items-center justify-center",
+    className: "rounded-full overflow-hidden bg-slate-800",
     style: {
       width: size,
       height: size
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    className: active ? "avatar-ring-active" : "",
-    style: {
-      position: "absolute",
-      inset: -6,
-      borderRadius: "9999px",
-      boxShadow: `0 0 0 3px ${ringColor}`
-    }
-  }), /*#__PURE__*/React.createElement("div", {
-    className: "avatar-photo relative rounded-full overflow-hidden bg-slate-800",
-    style: {
-      width: size,
-      height: size,
-      boxShadow: "0 12px 28px -10px rgba(2,6,23,.45)"
     }
   }, photoUrl ? /*#__PURE__*/React.createElement("img", {
     src: photoUrl,
@@ -359,52 +386,7 @@ function Avatar({
     style: {
       objectPosition: "center 22%"
     }
-  }) : /*#__PURE__*/React.createElement(SilhouetteAdult, null), speaking && /*#__PURE__*/React.createElement("div", {
-    className: "absolute inset-0",
-    style: {
-      background: "radial-gradient(circle at 50% 85%, rgba(34,197,94,.18), transparent 60%)"
-    }
-  }), listening && /*#__PURE__*/React.createElement("div", {
-    className: "absolute inset-0",
-    style: {
-      background: "radial-gradient(circle at 50% 85%, rgba(249,115,22,.18), transparent 60%)"
-    }
-  })), speaking && /*#__PURE__*/React.createElement("div", {
-    className: "absolute left-1/2 -translate-x-1/2 flex items-end gap-1 h-5",
-    style: {
-      bottom: -14
-    }
-  }, [0, 1, 2, 3, 4].map(i => /*#__PURE__*/React.createElement("div", {
-    key: i,
-    className: "wave-bar w-1 rounded-full bg-emerald-500",
-    style: {
-      height: "100%",
-      animationDelay: `${i * 0.1}s`
-    }
-  }))), listening && /*#__PURE__*/React.createElement("div", {
-    className: "absolute left-1/2 -translate-x-1/2 flex items-end gap-1 h-5",
-    style: {
-      bottom: -14
-    }
-  }, [0, 1, 2, 3, 4].map(i => /*#__PURE__*/React.createElement("div", {
-    key: i,
-    className: "wave-bar w-1 rounded-full bg-orange-500",
-    style: {
-      height: "100%",
-      animationDelay: `${i * 0.12}s`
-    }
-  }))), thinking && /*#__PURE__*/React.createElement("div", {
-    className: "absolute left-1/2 -translate-x-1/2 flex gap-1.5",
-    style: {
-      bottom: -12
-    }
-  }, [0, 1, 2].map(i => /*#__PURE__*/React.createElement("div", {
-    key: i,
-    className: "think-dot w-2 h-2 rounded-full bg-amber-500",
-    style: {
-      animationDelay: `${i * 0.15}s`
-    }
-  }))));
+  }) : /*#__PURE__*/React.createElement(SilhouetteAdult, null));
 }
 
 /* ============================== LANDING (HappyPay) ============================== */
@@ -657,6 +639,8 @@ function AdminPanel({
   voices,
   photoUrl,
   setPhotoUrl,
+  videoEnabled,
+  setVideoEnabled,
   onClose
 }) {
   const [pinInput, setPinInput] = useState("");
@@ -666,6 +650,7 @@ function AdminPanel({
   const [convenios, setConvenios] = useState(config.convenios);
   const [faq, setFaq] = useState(config.faq);
   const [error, setError] = useState("");
+  const [savingPhoto, setSavingPhoto] = useState(false);
   const fileInputRef = useRef(null);
   const photoInputRef = useRef(null);
   const tryUnlock = () => {
@@ -718,18 +703,19 @@ function AdminPanel({
     };
     reader.readAsText(file);
   };
-  const [savingPhoto, setSavingPhoto] = useState(false);
-  const onPhoto = e => {
+  const onPhoto = async e => {
     const file = e.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async ev => {
-      setPhotoUrl(ev.target.result);
-      setSavingPhoto(true);
-      await saveKolegaPhoto(ev.target.result);
-      setSavingPhoto(false);
-    };
-    reader.readAsDataURL(file);
+    setSavingPhoto(true);
+    setError("");
+    try {
+      const url = await uploadAvatarToStorage(file);
+      setPhotoUrl(url);
+      await saveKolegaPhoto(url);
+    } catch (err) {
+      setError("No se pudo subir la foto: " + err.message);
+    }
+    setSavingPhoto(false);
   };
   const updateFaqItem = (i, field, value) => setFaq(f => f.map((item, idx) => idx === i ? {
     ...item,
@@ -778,7 +764,7 @@ function AdminPanel({
     className: "grid sm:grid-cols-2 gap-3 mb-4 bg-slate-50 rounded-2xl p-4"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs text-slate-500 mb-1"
-  }, "Voz (SpeechSynthesis)"), /*#__PURE__*/React.createElement("select", {
+  }, "Voz (respaldo)"), /*#__PURE__*/React.createElement("select", {
     value: voiceURI,
     onChange: e => setVoiceURI(e.target.value),
     className: "w-full bg-white border border-slate-200 rounded-lg px-2 py-2 text-sm"
@@ -799,7 +785,7 @@ function AdminPanel({
     className: "mb-5 bg-slate-50 rounded-2xl p-4"
   }, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs text-slate-500 mb-2"
-  }, "Foto de Kolega (figura humana)"), /*#__PURE__*/React.createElement("div", {
+  }, "Avatar de Kolega"), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "w-14 h-14 rounded-full overflow-hidden bg-slate-200 flex-shrink-0"
@@ -824,9 +810,15 @@ function AdminPanel({
     accept: "image/*",
     onChange: onPhoto,
     className: "hidden"
-  })), /*#__PURE__*/React.createElement("p", {
+  })), /*#__PURE__*/React.createElement("label", {
+    className: "flex items-center gap-2 mt-3 text-sm text-slate-600"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: videoEnabled,
+    onChange: e => setVideoEnabled(e.target.checked)
+  }), "Avatar de ", /*#__PURE__*/React.createElement("b", null, "video en tiempo real (D-ID)"), " \u2014 la foto habla con lip-sync"), /*#__PURE__*/React.createElement("p", {
     className: "mt-2 text-[11px] text-slate-400"
-  }, "La foto se guarda y queda fija como avatar de Kolega para todos los que abran la p\xE1gina.")), /*#__PURE__*/React.createElement("div", {
+  }, "La foto se guarda y queda fija para todos. El modo video usa D-ID (consume minutos de tu cuenta); si falla o se agota, cae a la foto animada + voz.")), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2 mb-4 border-b border-slate-200 pb-2"
   }, [["politicas", "Política"], ["convenios", "Pagos"], ["faq", "FAQ"]].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
     key: id,
@@ -884,7 +876,7 @@ function AdminPanel({
   })))));
 }
 
-/* ============================== WIDGET KOLEGA (voz) ============================== */
+/* ============================== WIDGET KOLEGA (voz + video D-ID) ============================== */
 
 function KolegaWidget() {
   const [open, setOpen] = useState(false);
@@ -906,15 +898,29 @@ function KolegaWidget() {
   const [voiceURI, setVoiceURI] = useState("");
   const [voices, setVoices] = useState([]);
   const [photoUrl, setPhotoUrl] = useState(KOLEGA_PHOTO);
+  const [videoEnabled, setVideoEnabled] = useState(true);
+  const [didActive, setDidActive] = useState(false);
+  const [didStatus, setDidStatus] = useState("");
   const recognitionRef = useRef(null);
   const convoActiveRef = useRef(false);
   const busyRef = useRef(false);
+  const messagesRef = useRef([]);
+  const startListeningRef = useRef(() => {});
+  const pcRef = useRef(null);
+  const didRef = useRef({
+    id: null,
+    session_id: null
+  });
+  const videoRef = useRef(null);
+  const didActiveRef = useRef(false);
+  const listenTimerRef = useRef(null);
   const systemPrompt = useMemo(() => buildSystemPrompt(config.policies, config.convenios, config.faq), [config]);
   useEffect(() => {
     convoActiveRef.current = convoActive;
   }, [convoActive]);
-
-  // Carga la foto guardada de Kolega (persistida en Supabase)
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
   useEffect(() => {
     loadKolegaPhoto().then(p => {
       if (p) setPhotoUrl(p);
@@ -980,11 +986,128 @@ function KolegaWidget() {
       rec.start();
     } catch (e) {}
   }, []);
-  const speak = useCallback((text, thenListen) => {
+  useEffect(() => {
+    startListeningRef.current = startListening;
+  }, [startListening]);
+
+  // ---- D-ID: iniciar / hablar / detener ----
+  async function startDid(sourceUrl) {
+    if (!sourceUrl || !/^https?:/.test(sourceUrl)) {
+      setDidStatus("Sube una foto en el panel (⚙) para el modo video.");
+      return false;
+    }
+    if (!window.RTCPeerConnection) {
+      setDidStatus("Este navegador no soporta video en vivo.");
+      return false;
+    }
+    try {
+      setDidStatus("Conectando video…");
+      const {
+        status,
+        data
+      } = await didCall("/talks/streams", "POST", {
+        source_url: sourceUrl
+      });
+      if (status >= 400 || !data || !data.id) throw new Error(data && (data.description || data.error || data.kind) || "HTTP " + status);
+      didRef.current = {
+        id: data.id,
+        session_id: data.session_id
+      };
+      const pc = new RTCPeerConnection({
+        iceServers: data.ice_servers
+      });
+      pcRef.current = pc;
+      pc.ontrack = e => {
+        if (videoRef.current && e.streams && e.streams[0]) videoRef.current.srcObject = e.streams[0];
+      };
+      pc.onicecandidate = e => {
+        if (e.candidate && didRef.current.id) {
+          didCall(`/talks/streams/${didRef.current.id}/ice`, "POST", {
+            candidate: e.candidate.candidate,
+            sdpMid: e.candidate.sdpMid,
+            sdpMLineIndex: e.candidate.sdpMLineIndex,
+            session_id: didRef.current.session_id
+          });
+        }
+      };
+      pc.ondatachannel = e => {
+        e.channel.onmessage = msg => {
+          const m = String(msg.data || "");
+          if (m.indexOf("stream/done") !== -1) {
+            if (convoActiveRef.current && !busyRef.current) {
+              clearTimeout(listenTimerRef.current);
+              setTimeout(() => startListeningRef.current(), 250);
+            }
+          }
+        };
+      };
+      await pc.setRemoteDescription(data.offer);
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      await didCall(`/talks/streams/${didRef.current.id}/sdp`, "POST", {
+        answer,
+        session_id: didRef.current.session_id
+      });
+      setDidActive(true);
+      didActiveRef.current = true;
+      setDidStatus("");
+      return true;
+    } catch (err) {
+      setDidStatus("Video no disponible (uso voz): " + (err.message || err));
+      await stopDid();
+      return false;
+    }
+  }
+  async function didSpeak(text) {
+    try {
+      const {
+        status,
+        data
+      } = await didCall(`/talks/streams/${didRef.current.id}`, "POST", {
+        session_id: didRef.current.session_id,
+        script: {
+          type: "text",
+          provider: DID_VOICE,
+          input: text
+        },
+        config: {
+          stitch: true
+        }
+      });
+      if (status >= 400) throw new Error(data && data.description || "HTTP " + status);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+  async function stopDid() {
+    didActiveRef.current = false;
+    setDidActive(false);
+    clearTimeout(listenTimerRef.current);
+    try {
+      if (didRef.current.id) await didCall(`/talks/streams/${didRef.current.id}`, "DELETE", {
+        session_id: didRef.current.session_id
+      });
+    } catch (e) {}
+    try {
+      pcRef.current && pcRef.current.close();
+    } catch (e) {}
+    pcRef.current = null;
+    didRef.current = {
+      id: null,
+      session_id: null
+    };
+    if (videoRef.current) {
+      try {
+        videoRef.current.srcObject = null;
+      } catch (e) {}
+    }
+  }
+  function synthSpeak(text, thenListen) {
     window.speechSynthesis.cancel();
     if (!text) {
       setAvatarState("reposo");
-      if (thenListen && convoActiveRef.current) startListening();
+      if (thenListen && convoActiveRef.current) startListeningRef.current();
       return;
     }
     const utter = new SpeechSynthesisUtterance(text);
@@ -995,22 +1118,44 @@ function KolegaWidget() {
     utter.onstart = () => setAvatarState("hablando");
     const stop = () => {
       setAvatarState("reposo");
-      if (thenListen && convoActiveRef.current) setTimeout(() => startListening(), 350);
+      if (thenListen && convoActiveRef.current) setTimeout(() => startListeningRef.current(), 350);
     };
     utter.onend = stop;
     utter.onerror = stop;
     window.speechSynthesis.speak(utter);
-  }, [pickVoice, startListening]);
+  }
+  const speak = useCallback((text, thenListen) => {
+    if (didActiveRef.current) {
+      setAvatarState("hablando");
+      didSpeak(text).then(ok => {
+        if (!ok) {
+          didActiveRef.current = false;
+          setDidActive(false);
+          synthSpeak(text, thenListen);
+          return;
+        }
+        if (thenListen && convoActiveRef.current) {
+          clearTimeout(listenTimerRef.current);
+          listenTimerRef.current = setTimeout(() => {
+            if (convoActiveRef.current && !busyRef.current) startListeningRef.current();
+          }, Math.min(14000, 3000 + text.length * 75));
+        }
+      });
+      return;
+    }
+    synthSpeak(text, thenListen);
+  }, [pickVoice]);
   const sendTurn = useCallback(async userText => {
     busyRef.current = true;
     setSubtitle(userText);
     setAvatarState("pensando");
     setErrorMsg("");
-    const newHistory = [...messages, {
+    const newHistory = [...messagesRef.current, {
       role: "user",
       content: userText
     }];
     setMessages(newHistory);
+    messagesRef.current = newHistory;
     try {
       const {
         finalMessages,
@@ -1019,6 +1164,7 @@ function KolegaWidget() {
       } = await runBrainTurn(newHistory, systemPrompt, config.policies, apiKey);
       if (lastEval) setEvalData(lastEval);
       setMessages(finalMessages);
+      messagesRef.current = finalMessages;
       setSubtitle(replyText);
       busyRef.current = false;
       speak(replyText, true);
@@ -1030,33 +1176,42 @@ function KolegaWidget() {
       setAvatarState("reposo");
       speak(msg, false);
     }
-  }, [messages, systemPrompt, config.policies, apiKey, speak]);
-  const startConversation = () => {
+  }, [systemPrompt, config.policies, apiKey, speak]);
+  const startConversation = async () => {
     setConvoActive(true);
     convoActiveRef.current = true;
     const saludo = "¡Hola! Bienvenido a HappyPay, soy Kolega. ¿Le ayudo a llevar su celular a crédito hoy?";
     setSubtitle(saludo);
+    if (videoEnabled && photoUrl && /^https?:/.test(photoUrl)) {
+      await startDid(photoUrl);
+    }
     speak(saludo, true);
   };
-  const stopConversation = () => {
+  const stopConversation = async () => {
     setConvoActive(false);
     convoActiveRef.current = false;
     window.speechSynthesis.cancel();
+    clearTimeout(listenTimerRef.current);
     try {
       recognitionRef.current && recognitionRef.current.stop();
     } catch (e) {}
     setListening(false);
     setAvatarState("reposo");
+    await stopDid();
     setSubtitle("Conversación terminada. Toca «Conversar» cuando quieras seguir.");
   };
   const showEvalCard = evalData && evalData.result.cumple;
+  const listening_ = avatarState === "escuchando";
+  const thinking_ = avatarState === "pensando";
+  const speaking_ = avatarState === "hablando";
+  const ringColor = listening_ ? "#F97316" : speaking_ ? "#22C55E" : thinking_ ? "#F59E0B" : "rgba(15,23,42,.12)";
+  const ringActive = listening_ || speaking_ || thinking_;
   return /*#__PURE__*/React.createElement(React.Fragment, null, !open && /*#__PURE__*/React.createElement("button", {
     onClick: () => setOpen(true),
     className: "fixed z-40 bottom-5 right-5 flex items-center gap-2 rounded-full bg-orange-600 text-white pl-2 pr-4 py-2 shadow-2xl hover:bg-orange-500 active:scale-95 transition"
   }, /*#__PURE__*/React.createElement("span", {
     className: "w-11 h-11 rounded-full overflow-hidden bg-white/15 flex items-center justify-center"
-  }, /*#__PURE__*/React.createElement(Avatar, {
-    state: "reposo",
+  }, /*#__PURE__*/React.createElement(AvatarMini, {
     photoUrl: photoUrl,
     size: 44
   })), /*#__PURE__*/React.createElement("span", {
@@ -1071,7 +1226,9 @@ function KolegaWidget() {
     className: "font-extrabold"
   }, "Kolega"), /*#__PURE__*/React.createElement("span", {
     className: "text-[11px] bg-white/20 rounded-full px-2 py-0.5"
-  }, "HappyPay")), /*#__PURE__*/React.createElement("div", {
+  }, "HappyPay"), didActive && /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] bg-emerald-500 rounded-full px-2 py-0.5"
+  }, "\u25CF video")), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-1"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setAdminOpen(true),
@@ -1088,11 +1245,67 @@ function KolegaWidget() {
     className: "px-4 pt-5 pb-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex justify-center"
-  }, /*#__PURE__*/React.createElement(Avatar, {
-    state: avatarState,
-    photoUrl: photoUrl,
-    size: 150
-  })), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "relative flex items-center justify-center",
+    style: {
+      width: 150,
+      height: 150
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: ringActive ? "avatar-ring-active" : "",
+    style: {
+      position: "absolute",
+      inset: -6,
+      borderRadius: "9999px",
+      boxShadow: `0 0 0 3px ${ringColor}`
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "relative rounded-full overflow-hidden bg-slate-800 " + (didActive ? "" : "avatar-photo"),
+    style: {
+      width: 150,
+      height: 150,
+      boxShadow: "0 12px 28px -10px rgba(2,6,23,.45)"
+    }
+  }, /*#__PURE__*/React.createElement("video", {
+    ref: videoRef,
+    autoPlay: true,
+    playsInline: true,
+    className: "w-full h-full object-cover",
+    style: {
+      display: didActive ? "block" : "none",
+      objectPosition: "center 22%"
+    }
+  }), !didActive && (photoUrl ? /*#__PURE__*/React.createElement("img", {
+    src: photoUrl,
+    alt: "Kolega",
+    className: "w-full h-full object-cover",
+    style: {
+      objectPosition: "center 22%"
+    }
+  }) : /*#__PURE__*/React.createElement(SilhouetteAdult, null))), (speaking_ || listening_) && /*#__PURE__*/React.createElement("div", {
+    className: "absolute left-1/2 -translate-x-1/2 flex items-end gap-1 h-5",
+    style: {
+      bottom: -14
+    }
+  }, [0, 1, 2, 3, 4].map(i => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    className: "wave-bar w-1 rounded-full " + (speaking_ ? "bg-emerald-500" : "bg-orange-500"),
+    style: {
+      height: "100%",
+      animationDelay: `${i * 0.1}s`
+    }
+  }))), thinking_ && /*#__PURE__*/React.createElement("div", {
+    className: "absolute left-1/2 -translate-x-1/2 flex gap-1.5",
+    style: {
+      bottom: -12
+    }
+  }, [0, 1, 2].map(i => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    className: "think-dot w-2 h-2 rounded-full bg-amber-500",
+    style: {
+      animationDelay: `${i * 0.15}s`
+    }
+  }))))), /*#__PURE__*/React.createElement("div", {
     className: "mt-4 min-h-[3.2rem] text-center text-[15px] leading-snug text-slate-700 px-1"
   }, subtitle), showEvalCard && /*#__PURE__*/React.createElement("div", {
     className: "mt-2"
@@ -1106,7 +1319,7 @@ function KolegaWidget() {
   }, "\uD83C\uDF99 Conversar por voz") : /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2"
   }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => startListening(),
+    onClick: () => startListeningRef.current(),
     disabled: listening || avatarState === "hablando",
     className: `flex-1 py-3 rounded-full font-bold text-white active:scale-95 transition ${listening ? "bg-red-500 mic-pulse" : "bg-orange-600 hover:bg-orange-500 disabled:opacity-50"}`
   }, listening ? "Escuchando…" : avatarState === "hablando" ? "Kolega habla…" : "🎙 Hablar"), /*#__PURE__*/React.createElement("button", {
@@ -1114,7 +1327,7 @@ function KolegaWidget() {
     className: "px-4 py-3 rounded-full bg-slate-100 text-slate-600 font-semibold active:scale-95"
   }, "Terminar"))), /*#__PURE__*/React.createElement("div", {
     className: "mt-2 text-center text-[11px] text-slate-400"
-  }, "Conversaci\xF3n por voz \xB7 informaci\xF3n referencial"), errorMsg && /*#__PURE__*/React.createElement("div", {
+  }, didStatus ? didStatus : "Conversación por voz · información referencial"), errorMsg && /*#__PURE__*/React.createElement("div", {
     className: "mt-1 text-[10px] text-red-400 text-center truncate"
   }, errorMsg))), adminOpen && /*#__PURE__*/React.createElement(AdminPanel, {
     config: config,
@@ -1126,6 +1339,8 @@ function KolegaWidget() {
     voices: voices,
     photoUrl: photoUrl,
     setPhotoUrl: setPhotoUrl,
+    videoEnabled: videoEnabled,
+    setVideoEnabled: setVideoEnabled,
     onClose: () => setAdminOpen(false)
   }));
 }
