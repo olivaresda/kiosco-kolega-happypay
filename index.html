@@ -2,66 +2,53 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Kolega | HappyPay Ecuador</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HappyPay | Tu celular a crédito · Asistente Kolega</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --brand-green:#0EA46B;
-    --brand-green-dark:#0A7A50;
-    --brand-blue:#1D4ED8;
-    --brand-blue-dark:#152F87;
-    --bg:#0B1220;
-  }
-  html,body{height:100%;overflow:hidden;}
+  html,body{ min-height:100%; }
   body{
     font-family:'Inter',sans-serif;
-    background:radial-gradient(circle at 50% 0%, #0F2A3A 0%, var(--bg) 70%);
-    color:#F1F5F9;
+    background:linear-gradient(180deg,#FFF7F0 0%,#FFF3E8 40%,#FFFFFF 100%);
+    color:#0F172A;
     -webkit-font-smoothing:antialiased;
     -webkit-tap-highlight-color:transparent;
-    user-select:none;
   }
   .no-scrollbar::-webkit-scrollbar{display:none;}
 
-  @keyframes breathing{
-    0%,100%{ transform:translateY(0) scale(1); }
-    50%{ transform:translateY(-3px) scale(1.008); }
-  }
+  @keyframes breathing{ 0%,100%{ transform:translateY(0) scale(1);} 50%{ transform:translateY(-2px) scale(1.006);} }
   .avatar-breathe{ animation:breathing 4.2s ease-in-out infinite; transform-origin:center bottom; }
-
-  @keyframes bounceDot{
-    0%,80%,100%{ transform:translateY(0); opacity:.5; }
-    40%{ transform:translateY(-6px); opacity:1; }
-  }
+  @keyframes bounceDot{ 0%,80%,100%{ transform:translateY(0); opacity:.5;} 40%{ transform:translateY(-5px); opacity:1;} }
   .think-dot{ animation:bounceDot 1.1s ease-in-out infinite; }
-
-  @keyframes waveBar{
-    0%,100%{ transform:scaleY(.3); }
-    50%{ transform:scaleY(1); }
-  }
+  @keyframes waveBar{ 0%,100%{ transform:scaleY(.3);} 50%{ transform:scaleY(1);} }
   .wave-bar{ animation:waveBar .9s ease-in-out infinite; transform-origin:center; }
-
-  @keyframes pulseRing{
-    0%{ box-shadow:0 0 0 0 rgba(14,164,107,.55); }
-    100%{ box-shadow:0 0 0 22px rgba(14,164,107,0); }
-  }
-  .mic-pulse{ animation:pulseRing 1.6s ease-out infinite; }
-
+  @keyframes pulseRing{ 0%{ box-shadow:0 0 0 0 rgba(239,68,68,.5);} 100%{ box-shadow:0 0 0 16px rgba(239,68,68,0);} }
+  .mic-pulse{ animation:pulseRing 1.4s ease-out infinite; }
   .eye-lid{ transition:transform .09s ease-in-out; transform-origin:center; }
   .head-group{ transition:transform .5s cubic-bezier(.4,0,.2,1); transform-origin:150px 190px; }
   .pupil{ transition:transform .35s ease; }
   .viseme{ transition:opacity .07s linear; }
 
-  input[type=text], textarea{ -webkit-user-select:text; user-select:text; }
+  /* Mockup de teléfono */
+  .phone-frame{
+    position:absolute; width:190px; height:390px; border-radius:34px;
+    background:linear-gradient(160deg,#FF7A3D,#E8551B);
+    padding:12px; box-shadow:0 30px 60px -20px rgba(232,85,27,.55);
+    border:6px solid #1f2937;
+  }
+  @keyframes floaty{ 0%,100%{ transform:translateY(0) rotate(var(--rot,0deg)); } 50%{ transform:translateY(-10px) rotate(var(--rot,0deg)); } }
+  .phone-front{ --rot:6deg; animation:floaty 6s ease-in-out infinite; z-index:2; }
+  .phone-back{ --rot:-8deg; animation:floaty 7s ease-in-out infinite; z-index:1; opacity:.96; }
+  .phone-notch{ position:absolute; top:14px; left:50%; transform:translateX(-50%); width:70px; height:14px; background:#1f2937; border-radius:0 0 12px 12px; }
+  .phone-screen{ height:100%; border-radius:24px; background:linear-gradient(180deg,#FF8A4C,#E8551B); padding:22px 14px 14px; overflow:hidden; }
+  @media (max-width:420px){ .phone-frame{ width:150px; height:310px; } }
 </style>
 </head>
-<body class="h-full w-full">
-<div id="root" class="h-full w-full"></div>
-
+<body>
+<div id="root"></div>
 <script>
 const {
   useState,
@@ -71,50 +58,56 @@ const {
   useMemo
 } = React;
 
-/* ============================== CONFIG BASE ============================== */
+/* ============================== CONFIG / CONOCIMIENTO ============================== */
 
 const ADMIN_PIN_DEFAULT = "254800";
+const PROXY_URL = "https://lllyjmnbgegbbetgrmvq.supabase.co/functions/v1/chat";
+const PROXY_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxsbHlqbW5iZ2VnYmJldGdybXZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ2NDA4MjIsImV4cCI6MjEwMDIxNjgyMn0.LiKzwHYLgSUZxpe06n4U6OqPErkEN2JRVGULedeSCk8";
 const DEFAULT_POLICIES = {
-  monto_minimo_usd: 200,
-  monto_maximo_usd: 5000,
-  plazos_meses: [3, 6, 9, 12, 18],
-  tasa_mensual_pct: 1.8,
-  ingreso_minimo_usd: 460,
-  ratio_cuota_ingreso_max: 0.35,
-  edad_minima: 21,
-  edad_maxima: 70,
-  requisitos: ["Cédula vigente", "Comprobante de ingresos", "Planilla de servicio básico"]
+  precio_minimo_usd: 100,
+  precio_maximo_usd: 2000,
+  plazos_meses: [3, 6, 9, 12, 18, 24, 32],
+  tasa_mensual_pct: 3.5,
+  ingreso_minimo_usd: 300,
+  ratio_cuota_ingreso_max: 0.40,
+  requisitos: ["Cédula vigente"]
 };
-const DEFAULT_CONVENIOS = `Convenios vigentes: Banco Pichincha, Banco Guayaquil, Produbanco.
-Canales de pago: Kioscos HappyPay, Banco del Barrio, transferencia bancaria, app HappyPay.
-Horario de atención presencial: lunes a sábado, 09:00 a 18:00.`;
+const DEFAULT_CONVENIOS = `Puntos de pago: más de 15,000 en todo el país, y pago en línea desde la app HappyPay.
+Canales de pago: Servipagos, Western Union, Red Facilito, PagoÁgil, Tía, Banco del Barrio y Mi Vecino.
+Si te atrasas en un pago, el equipo se bloquea automáticamente por la plataforma HappyPay (solo llamadas de emergencia y servicio al cliente) hasta ponerte al día; al pagar se reactiva.`;
 const DEFAULT_FAQ = [{
-  pregunta: "¿Qué documentos necesito para un crédito?",
-  respuesta: "Cédula vigente, comprobante de ingresos y planilla de un servicio básico reciente."
+  pregunta: "¿Qué necesito para comprar mi celular a crédito?",
+  respuesta: "Solo tu cédula. Sin garante y sin trámites bancarios complicados; la aprobación es rápida, en unos 30 minutos."
 }, {
-  pregunta: "¿Dónde puedo pagar mi cuota?",
-  respuesta: "En cualquier kiosco HappyPay, Banco del Barrio, transferencia bancaria o desde la app HappyPay."
+  pregunta: "¿En cuánto tiempo puedo pagar?",
+  respuesta: "En cuotas semanales, con plazos flexibles de hasta 32 meses."
 }, {
-  pregunta: "¿Puedo pagar antes de la fecha límite?",
-  respuesta: "Sí, puede pagar en cualquier momento antes de su fecha de vencimiento sin costo adicional."
+  pregunta: "¿Dónde puedo pagar?",
+  respuesta: "En más de 15,000 puntos de pago (Servipagos, Western Union, Red Facilito, PagoÁgil, Tía, Banco del Barrio, Mi Vecino) o en línea desde la app HappyPay."
+}, {
+  pregunta: "¿Qué pasa si me atraso en un pago?",
+  respuesta: "El equipo se bloquea automáticamente y solo podrás llamar a emergencias y a servicio al cliente, hasta que te pongas al día. Al pagar, se reactiva."
+}, {
+  pregunta: "¿Qué beneficios incluye?",
+  respuesta: "Telemedicina y odontología gratis, y 15% de descuento en farmacias económicas y Medicity, además de la cuota más baja del mercado."
 }];
 const EVALUAR_CREDITO_TOOL = {
   name: "evaluar_credito",
-  description: "Evalúa si una solicitud de crédito cumple con la política vigente de HappyPay y calcula la cuota mensual estimada usando amortización francesa.",
+  description: "Estima la cuota referencial para financiar un celular a crédito en HappyPay y verifica si encaja con la política vigente. Usa amortización francesa con la tasa cargada.",
   input_schema: {
     type: "object",
     properties: {
       monto_usd: {
         type: "number",
-        description: "Monto solicitado en dólares."
+        description: "Precio aproximado del celular en dólares."
       },
       plazo_meses: {
         type: "integer",
-        description: "Plazo en meses."
+        description: "Plazo en meses (hasta 32)."
       },
       ingreso_mensual_usd: {
         type: "number",
-        description: "Ingreso mensual del cliente en dólares."
+        description: "Ingreso mensual aproximado del cliente en dólares."
       }
     },
     required: ["monto_usd", "plazo_meses", "ingreso_mensual_usd"]
@@ -122,30 +115,31 @@ const EVALUAR_CREDITO_TOOL = {
 };
 function buildSystemPrompt(policies, convenios, faq) {
   const faqText = faq.map(f => `- P: ${f.pregunta}\n  R: ${f.respuesta}`).join("\n");
-  return `Eres "Kolega", asistente virtual de HappyPay Ecuador en un tótem presencial. Español ecuatoriano, trato de "usted", 2-3 frases por turno, tono de ayuda, nunca de presión.
+  return `Eres "Kolega", el asistente virtual por voz de HappyPay Ecuador. HappyPay financia la compra de celulares a crédito, con las cuotas más bajas del Ecuador, sin garante y solo con la cédula. Trato de "usted", cercano y alegre, 2-3 frases por turno, tono de ayuda, nunca de presión. Como es una conversación por VOZ, responde de forma natural, breve y fácil de escuchar; no uses listas ni símbolos raros, habla como una persona.
 
-Roles: orientar trámites; informar opciones para ponerse al día (según convenios cargados); pre-evaluar créditos con la herramienta evaluar_credito; presentar productos; derivar a ejecutivo cuando corresponda.
+Lo que sabes y ofreces:
+- Compra de celular a crédito con aprobación rápida (en unos 30 minutos), en Quito y todo el Ecuador.
+- Solo se necesita la cédula; sin garante y sin trámites bancarios complicados.
+- Cuotas semanales, plazos flexibles hasta 32 meses.
+- Beneficios incluidos: telemedicina y odontología gratis, y 15% de descuento en farmacias económicas y Medicity. La cuota más baja del mercado.
+- Más de 15,000 puntos de pago y pago en línea desde la app HappyPay. Canales: Servipagos, Western Union, Red Facilito, PagoÁgil, Tía, Banco del Barrio y Mi Vecino.
+- Si un pago no se realiza en su fecha, el equipo se bloquea automáticamente por la plataforma HappyPay (solo llamadas de emergencia y servicio al cliente) hasta ponerse al día; al pagar se reactiva.
 
-Privacidad (inquebrantable): espacio público — nunca digas en voz alta montos de deuda, ingresos ni datos personales; cifras se digitan en el teclado en pantalla y solo confirmas "recibido"; jamás confirmes ni niegues que alguien tiene deuda; no pidas la cédula por voz.
+Simulación de crédito: si el cliente quiere simular, pregunta primero el precio aproximado del celular y en cuántos meses desea pagar (hasta 32); si hace falta, pregunta su ingreso mensual aproximado. Con esos datos llama a la herramienta evaluar_credito. Presenta SIEMPRE la cuota como PRE-EVALUACIÓN REFERENCIAL sujeta a verificación. Nunca digas "aprobado" ni "rechazado"; si no cuadra, ofrece un celular de menor precio, un plazo mayor, o pasar con un asesor.
 
-Flujo de crédito: pregunta monto deseado, luego plazo, luego ingreso mensual. Estos tres datos SIEMPRE deben digitarse en pantalla, nunca decirse en voz alta. Para pedir cada dato, termina tu turno incluyendo exactamente uno de estos marcadores según corresponda (no lo pronuncies, es una instrucción técnica para la interfaz, se elimina antes de mostrarse o hablarse):
-- [TECLADO:monto] cuando necesites el monto deseado.
-- [TECLADO:plazo] cuando necesites el plazo (el usuario elegirá un chip entre los plazos vigentes).
-- [TECLADO:ingreso] cuando necesites el ingreso mensual.
-Una vez tengas los tres datos, llama a la herramienta evaluar_credito. Si cumple: informa la cuota estimada SIEMPRE como pre-evaluación referencial sujeta a verificación de documentos, e invita al módulo con los requisitos. Si no cumple: nunca digas "rechazado"; di que "con estos datos no podemos avanzar por este canal" y ofrece monto menor, mayor plazo o ejecutivo. Nunca prometas aprobación ni condiciones fuera de la política cargada.
+Atención y cobranza: usa "ponerse al día", "facilidades", "opciones"; prohibido "moroso" o lenguaje que avergüence. Ante molestia, valida y ofrece hablar con un asesor.
 
-Cobranza: vocabulario "ponerse al día", "facilidades", "opciones"; prohibido "moroso" o lenguaje que avergüence; ante molestia, validar y derivar a ejecutivo.
+No inventes precios de modelos, tasas exactas, números de teléfono ni promociones que no estén aquí. Si no sabes un dato puntual, ofrece derivar con un asesor o revisar la app HappyPay.
 
-Saludo inicial: "¡Buenos días! Bienvenido a HappyPay. ¿En qué le puedo ayudar hoy?"
+Saludo inicial: "¡Hola! Bienvenido a HappyPay, soy Kolega. ¿Le ayudo a llevar su celular a crédito hoy?"
 
 [CONOCIMIENTOS CARGADOS]
-Políticas de crédito (JSON):
-${JSON.stringify(policies)}
+Política (JSON): ${JSON.stringify(policies)}
 
-Convenios y pagos:
+Pagos y convenios:
 ${convenios}
 
-FAQ:
+Preguntas frecuentes:
 ${faqText}`;
 }
 function evaluarCredito(input, policies) {
@@ -158,29 +152,31 @@ function evaluarCredito(input, policies) {
   const n = plazo_meses;
   const factor = Math.pow(1 + i, n);
   const cuota = monto_usd * (i * factor) / (factor - 1);
+  const cuota_semanal = cuota / 4.33;
   const motivos = [];
-  if (!(monto_usd >= policies.monto_minimo_usd && monto_usd <= policies.monto_maximo_usd)) {
-    motivos.push(`El monto debe estar entre $${policies.monto_minimo_usd} y $${policies.monto_maximo_usd}.`);
+  if (!(monto_usd >= policies.precio_minimo_usd && monto_usd <= policies.precio_maximo_usd)) {
+    motivos.push(`El precio debe estar entre $${policies.precio_minimo_usd} y $${policies.precio_maximo_usd}.`);
   }
   if (!policies.plazos_meses.includes(plazo_meses)) {
     motivos.push(`El plazo debe ser uno de: ${policies.plazos_meses.join(", ")} meses.`);
   }
   if (!(ingreso_mensual_usd >= policies.ingreso_minimo_usd)) {
-    motivos.push(`El ingreso mensual mínimo requerido es $${policies.ingreso_minimo_usd}.`);
+    motivos.push(`El ingreso mensual mínimo referencial es $${policies.ingreso_minimo_usd}.`);
   }
   const ratio = cuota / ingreso_mensual_usd;
   if (ratio > policies.ratio_cuota_ingreso_max) {
-    motivos.push(`La cuota representaría ${(ratio * 100).toFixed(0)}% del ingreso, superando el máximo permitido de ${(policies.ratio_cuota_ingreso_max * 100).toFixed(0)}%.`);
+    motivos.push(`La cuota representaría ${(ratio * 100).toFixed(0)}% del ingreso, sobre el máximo referencial de ${(policies.ratio_cuota_ingreso_max * 100).toFixed(0)}%.`);
   }
   const cumple = motivos.length === 0;
   return {
     cumple,
-    cuota_estimada: Number.isFinite(cuota) ? Number(cuota.toFixed(2)) : null,
-    motivo: cumple ? "Cumple con la política de crédito vigente." : motivos.join(" ")
+    cuota_estimada_mensual: Number.isFinite(cuota) ? Number(cuota.toFixed(2)) : null,
+    cuota_estimada_semanal: Number.isFinite(cuota_semanal) ? Number(cuota_semanal.toFixed(2)) : null,
+    motivo: cumple ? "Encaja con la política referencial vigente." : motivos.join(" ")
   };
 }
 
-/* ============================== BRAIN (API) ============================== */
+/* ============================== CEREBRO (API vía proxy) ============================== */
 
 async function callAnthropic(messages, systemPrompt, apiKey) {
   const body = {
@@ -190,10 +186,6 @@ async function callAnthropic(messages, systemPrompt, apiKey) {
     tools: [EVALUAR_CREDITO_TOOL],
     messages
   };
-
-  // 1) Proxy serverless (Supabase Edge Function) que guarda la API key en el servidor.
-  const PROXY_URL = "https://lllyjmnbgegbbetgrmvq.supabase.co/functions/v1/chat";
-  const PROXY_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxsbHlqbW5iZ2VnYmJldGdybXZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ2NDA4MjIsImV4cCI6MjEwMDIxNjgyMn0.LiKzwHYLgSUZxpe06n4U6OqPErkEN2JRVGULedeSCk8";
   try {
     const r = await fetch(PROXY_URL, {
       method: "POST",
@@ -211,13 +203,8 @@ async function callAnthropic(messages, systemPrompt, apiKey) {
     }
   } catch (e) {
     if (!(e instanceof TypeError)) throw e;
-    // TypeError = no se pudo alcanzar el proxy (ej. archivo abierto localmente); sigue al fallback.
   }
-
-  // 2) Fallback: llamada directa desde el navegador con la API key ingresada en el panel admin.
-  if (!apiKey) {
-    throw new Error("No hay conexión con el backend ni una API key configurada en el panel de administración.");
-  }
+  if (!apiKey) throw new Error("No hay conexión con el backend ni una API key en el panel admin.");
   const r2 = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -244,19 +231,17 @@ async function runBrainTurn(history, systemPrompt, policies, apiKey) {
       input: toolUse.input,
       result
     };
-    const assistantMsg = {
+    messages = [...messages, {
       role: "assistant",
       content: response.content
-    };
-    const toolResultMsg = {
+    }, {
       role: "user",
       content: [{
         type: "tool_result",
         tool_use_id: toolUse.id,
         content: JSON.stringify(result)
       }]
-    };
-    messages = [...messages, assistantMsg, toolResultMsg];
+    }];
     response = await callAnthropic(messages, systemPrompt, apiKey);
   }
   const textBlock = response.content.find(b => b.type === "text");
@@ -277,7 +262,8 @@ const VISEMES = ["closed", "semi", "open", "o", "e"];
 function AvatarSVG({
   state,
   viseme,
-  isBlinking
+  isBlinking,
+  size
 }) {
   const listening = state === "escuchando";
   const thinking = state === "pensando";
@@ -288,10 +274,12 @@ function AvatarSVG({
     className: "relative flex items-center justify-center"
   }, /*#__PURE__*/React.createElement("svg", {
     viewBox: "0 0 300 400",
-    className: "w-64 h-auto sm:w-72 md:w-80 avatar-breathe",
     style: {
-      filter: "drop-shadow(0 10px 25px rgba(0,0,0,.35))"
-    }
+      width: size || 180,
+      height: "auto",
+      filter: "drop-shadow(0 10px 22px rgba(0,0,0,.18))"
+    },
+    className: "avatar-breathe"
   }, /*#__PURE__*/React.createElement("defs", null, /*#__PURE__*/React.createElement("linearGradient", {
     id: "bodyGrad",
     x1: "0",
@@ -300,10 +288,10 @@ function AvatarSVG({
     y2: "1"
   }, /*#__PURE__*/React.createElement("stop", {
     offset: "0%",
-    stopColor: "#1D4ED8"
+    stopColor: "#FF7A3D"
   }), /*#__PURE__*/React.createElement("stop", {
     offset: "100%",
-    stopColor: "#152F87"
+    stopColor: "#E8551B"
   })), /*#__PURE__*/React.createElement("linearGradient", {
     id: "hairGrad",
     x1: "0",
@@ -312,10 +300,10 @@ function AvatarSVG({
     y2: "1"
   }, /*#__PURE__*/React.createElement("stop", {
     offset: "0%",
-    stopColor: "#0EA46B"
+    stopColor: "#3B2A22"
   }), /*#__PURE__*/React.createElement("stop", {
     offset: "100%",
-    stopColor: "#0A7A50"
+    stopColor: "#241814"
   }))), /*#__PURE__*/React.createElement("path", {
     d: "M60,400 C60,300 90,255 150,255 C210,255 240,300 240,400 Z",
     fill: "url(#bodyGrad)"
@@ -325,11 +313,11 @@ function AvatarSVG({
     width: "40",
     height: "45",
     rx: "14",
-    fill: "#E7B896"
+    fill: "#F0BE9A"
   }), /*#__PURE__*/React.createElement("path", {
     d: "M120,260 L150,282 L180,260 L180,278 L150,300 L120,278 Z",
-    fill: "#0EA46B",
-    opacity: "0.85"
+    fill: "#FFC53D",
+    opacity: "0.95"
   }), /*#__PURE__*/React.createElement("g", {
     className: "head-group",
     style: {
@@ -343,19 +331,19 @@ function AvatarSVG({
     cy: "155",
     rx: "66",
     ry: "76",
-    fill: "#E7B896"
+    fill: "#F0BE9A"
   }), /*#__PURE__*/React.createElement("path", {
     d: "M86,140 C86,92 112,64 150,64 C188,64 214,92 214,140 C205,110 182,96 150,96 C118,96 95,110 86,140 Z",
     fill: "url(#hairGrad)"
   }), /*#__PURE__*/React.createElement("path", {
     d: thinking ? "M110,118 Q122,110 134,116" : "M110,122 Q122,116 134,122",
-    stroke: "#5B3A29",
+    stroke: "#3B2A22",
     strokeWidth: "4",
     fill: "none",
     strokeLinecap: "round"
   }), /*#__PURE__*/React.createElement("path", {
     d: thinking ? "M166,116 Q178,110 190,118" : "M166,122 Q178,116 190,122",
-    stroke: "#5B3A29",
+    stroke: "#3B2A22",
     strokeWidth: "4",
     fill: "none",
     strokeLinecap: "round"
@@ -381,7 +369,7 @@ function AvatarSVG({
     cx: "122",
     cy: 140 + pupilOffsetY,
     r: "6",
-    fill: "#1E293B",
+    fill: "#2A2320",
     style: {
       transform: `translateY(${pupilOffsetY}px)`
     }
@@ -390,7 +378,7 @@ function AvatarSVG({
     cx: "178",
     cy: 140 + pupilOffsetY,
     r: "6",
-    fill: "#1E293B",
+    fill: "#2A2320",
     style: {
       transform: `translateY(${pupilOffsetY}px)`
     }
@@ -400,14 +388,14 @@ function AvatarSVG({
     rx: "10",
     ry: "6",
     fill: "#F2907A",
-    opacity: "0.35"
+    opacity: "0.4"
   }), /*#__PURE__*/React.createElement("ellipse", {
     cx: "194",
     cy: "172",
     rx: "10",
     ry: "6",
     fill: "#F2907A",
-    opacity: "0.35"
+    opacity: "0.4"
   }), /*#__PURE__*/React.createElement("g", {
     transform: "translate(150,192)"
   }, /*#__PURE__*/React.createElement("rect", {
@@ -453,121 +441,230 @@ function AvatarSVG({
       opacity: viseme === "e" ? 1 : 0
     }
   })))), listening && /*#__PURE__*/React.createElement("div", {
-    className: "absolute -right-2 top-8 flex items-end gap-1 h-8"
+    className: "absolute -right-1 top-4 flex items-end gap-1 h-7"
   }, [0, 1, 2, 3].map(i => /*#__PURE__*/React.createElement("div", {
     key: i,
-    className: "wave-bar w-1.5 rounded-full bg-emerald-400",
+    className: "wave-bar w-1.5 rounded-full bg-orange-500",
     style: {
       height: "100%",
       animationDelay: `${i * 0.12}s`
     }
   }))), thinking && /*#__PURE__*/React.createElement("div", {
-    className: "absolute -right-4 top-6 flex gap-1.5"
+    className: "absolute -right-2 top-3 flex gap-1.5"
   }, [0, 1, 2].map(i => /*#__PURE__*/React.createElement("div", {
     key: i,
-    className: "think-dot w-2.5 h-2.5 rounded-full bg-sky-300",
+    className: "think-dot w-2 h-2 rounded-full bg-amber-500",
     style: {
       animationDelay: `${i * 0.15}s`
     }
-  }))), speaking && /*#__PURE__*/React.createElement("div", {
-    className: "absolute -left-3 top-10 w-3 h-3 rounded-full bg-emerald-400 animate-ping"
-  }));
+  }))));
 }
 
-/* ============================== UI PIECES ============================== */
+/* ============================== LANDING (HappyPay) ============================== */
 
-function QuickActions({
-  onPick,
-  disabled
+function PhoneMock({
+  className,
+  style
 }) {
-  const actions = [{
-    label: "Ponerme al día",
-    text: "Quiero ponerme al día con mis pagos."
+  return /*#__PURE__*/React.createElement("div", {
+    className: "phone-frame " + (className || ""),
+    style: style
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "phone-notch"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "phone-screen"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-white/90 text-[11px] font-semibold tracking-wide"
+  }, "HappyPay"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-1 text-white text-lg font-extrabold leading-tight"
+  }, "Mi cr\xE9dito"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-3 rounded-2xl bg-white p-3 shadow-lg"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-slate-500 uppercase tracking-wide"
+  }, "Tu celular"), /*#__PURE__*/React.createElement("div", {
+    className: "text-slate-900 font-bold text-sm"
+  }, "Smartphone 128GB"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-2 flex items-end justify-between"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-slate-500"
+  }, "Cuota semanal"), /*#__PURE__*/React.createElement("div", {
+    className: "text-orange-600 font-extrabold text-lg"
+  }, "$6,25")), /*#__PURE__*/React.createElement("div", {
+    className: "text-right"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-slate-500"
+  }, "Plazo"), /*#__PURE__*/React.createElement("div", {
+    className: "text-slate-900 font-bold text-sm"
+  }, "32 meses"))), /*#__PURE__*/React.createElement("div", {
+    className: "mt-2 h-2 rounded-full bg-slate-100 overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "h-full bg-gradient-to-r from-orange-400 to-amber-400",
+    style: {
+      width: "40%"
+    }
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "mt-3 grid grid-cols-3 gap-2"
+  }, ["Pagar", "Puntos", "Beneficios"].map(t => /*#__PURE__*/React.createElement("div", {
+    key: t,
+    className: "rounded-xl bg-white/15 text-white text-[10px] font-semibold py-2 text-center"
+  }, t)))));
+}
+function Landing() {
+  const beneficios = [{
+    t: "Solo tu cédula",
+    d: "Sin garante y sin trámites bancarios complicados.",
+    i: "🪪"
   }, {
-    label: "Simular un crédito",
-    text: "Quiero simular un crédito."
+    t: "Cuotas semanales",
+    d: "Plazos flexibles hasta 32 meses, la cuota más baja.",
+    i: "📅"
   }, {
-    label: "Dónde pagar",
-    text: "¿Dónde puedo pagar?"
+    t: "Salud incluida",
+    d: "Telemedicina y odontología gratis con tu crédito.",
+    i: "🩺"
   }, {
-    label: "Hablar con ejecutivo",
-    text: "Quiero hablar con un ejecutivo."
+    t: "15% en farmacias",
+    d: "Descuento en farmacias económicas y Medicity.",
+    i: "💊"
   }];
+  const pasos = [{
+    n: "1",
+    t: "Presenta tu cédula",
+    d: "Sin garante, sin papeleo complicado."
+  }, {
+    n: "2",
+    t: "Cotiza tu celular",
+    d: "Elige el equipo y el plazo que más te convenga."
+  }, {
+    n: "3",
+    t: "Aprobación rápida",
+    d: "En unos 30 minutos y te lo llevas."
+  }];
+  const canales = ["Servipagos", "Western Union", "Red Facilito", "PagoÁgil", "Tía", "Banco del Barrio", "Mi Vecino"];
   return /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-2 gap-3 w-full max-w-md"
-  }, actions.map(a => /*#__PURE__*/React.createElement("button", {
-    key: a.label,
-    disabled: disabled,
-    onClick: () => onPick(a.text),
-    className: "rounded-2xl bg-white/10 hover:bg-white/20 active:scale-95 transition text-sm sm:text-base font-medium py-4 px-3 border border-white/10 disabled:opacity-40"
-  }, a.label)));
-}
-function NumericKeypad({
-  label,
-  onConfirm,
-  onCancel
-}) {
-  const [value, setValue] = useState("");
-  const press = d => setValue(v => v.length < 7 ? v + d : v);
-  const back = () => setValue(v => v.slice(0, -1));
-  return /*#__PURE__*/React.createElement("div", {
-    className: "fixed inset-0 z-30 bg-black/70 flex items-center justify-center p-4"
+    className: "min-h-screen"
+  }, /*#__PURE__*/React.createElement("header", {
+    className: "max-w-6xl mx-auto px-5 sm:px-8 py-5 flex items-center justify-between"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-slate-900 border border-white/10 rounded-3xl p-6 w-full max-w-sm"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "text-center text-slate-300 mb-2"
-  }, label), /*#__PURE__*/React.createElement("div", {
-    className: "text-center text-4xl font-bold mb-4 py-3 bg-black/30 rounded-xl"
-  }, value ? `$${value}` : /*#__PURE__*/React.createElement("span", {
-    className: "text-slate-500"
-  }, "$0")), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-3 gap-3"
-  }, ["1", "2", "3", "4", "5", "6", "7", "8", "9"].map(d => /*#__PURE__*/React.createElement("button", {
-    key: d,
-    onClick: () => press(d),
-    className: "py-4 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-xl font-semibold"
-  }, d)), /*#__PURE__*/React.createElement("button", {
-    onClick: back,
-    className: "py-4 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-xl font-semibold"
-  }, "\u232B"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => press("0"),
-    className: "py-4 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-xl font-semibold"
-  }, "0"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setValue(""),
-    className: "py-4 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-xl font-semibold"
-  }, "C")), /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-3 mt-5"
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: onCancel,
-    className: "flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10"
-  }, "Cancelar"), /*#__PURE__*/React.createElement("button", {
-    disabled: !value,
-    onClick: () => onConfirm(Number(value)),
-    className: "flex-1 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 font-semibold text-slate-900"
-  }, "Confirmar"))));
-}
-function PlazoChips({
-  plazos,
-  onConfirm,
-  onCancel
-}) {
-  return /*#__PURE__*/React.createElement("div", {
-    className: "fixed inset-0 z-30 bg-black/70 flex items-center justify-center p-4"
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "inline-flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-amber-400 text-white font-black"
+  }, "H"), /*#__PURE__*/React.createElement("span", {
+    className: "font-extrabold text-xl text-slate-900"
+  }, "Happy", /*#__PURE__*/React.createElement("span", {
+    className: "text-orange-600"
+  }, "Pay"))), /*#__PURE__*/React.createElement("nav", {
+    className: "hidden sm:flex items-center gap-6 text-sm font-medium text-slate-600"
+  }, /*#__PURE__*/React.createElement("a", {
+    href: "#como",
+    className: "hover:text-orange-600"
+  }, "C\xF3mo funciona"), /*#__PURE__*/React.createElement("a", {
+    href: "#beneficios",
+    className: "hover:text-orange-600"
+  }, "Beneficios"), /*#__PURE__*/React.createElement("a", {
+    href: "#pagos",
+    className: "hover:text-orange-600"
+  }, "Pagos"))), /*#__PURE__*/React.createElement("section", {
+    className: "max-w-6xl mx-auto px-5 sm:px-8 pt-6 pb-14 grid md:grid-cols-2 gap-10 items-center"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    className: "inline-block text-xs font-bold uppercase tracking-widest text-orange-600 bg-orange-100 rounded-full px-3 py-1"
+  }, "Celular a cr\xE9dito"), /*#__PURE__*/React.createElement("h1", {
+    className: "mt-4 text-4xl sm:text-5xl font-black text-slate-900 leading-[1.05]"
+  }, "Tu celular a cr\xE9dito, con las ", /*#__PURE__*/React.createElement("span", {
+    className: "text-orange-600"
+  }, "cuotas m\xE1s bajas"), " del Ecuador"), /*#__PURE__*/React.createElement("p", {
+    className: "mt-4 text-lg text-slate-600 max-w-md"
+  }, "Aprobaci\xF3n r\xE1pida en unos 30 minutos, sin garante y solo con tu c\xE9dula. Cuotas semanales hasta 32 meses."), /*#__PURE__*/React.createElement("div", {
+    className: "mt-6 flex flex-wrap gap-3"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "rounded-full bg-white shadow-sm border border-slate-100 px-4 py-2 text-sm font-semibold text-slate-700"
+  }, "\u2705 Sin garante"), /*#__PURE__*/React.createElement("span", {
+    className: "rounded-full bg-white shadow-sm border border-slate-100 px-4 py-2 text-sm font-semibold text-slate-700"
+  }, "\u26A1 30 minutos"), /*#__PURE__*/React.createElement("span", {
+    className: "rounded-full bg-white shadow-sm border border-slate-100 px-4 py-2 text-sm font-semibold text-slate-700"
+  }, "\uD83C\uDDEA\uD83C\uDDE8 Todo el Ecuador")), /*#__PURE__*/React.createElement("p", {
+    className: "mt-6 text-sm text-slate-500"
+  }, "\uD83D\uDC49 Habla con ", /*#__PURE__*/React.createElement("b", {
+    className: "text-orange-600"
+  }, "Kolega"), ", tu asistente por voz, en la esquina de la pantalla.")), /*#__PURE__*/React.createElement("div", {
+    className: "relative h-[380px] sm:h-[440px]"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-slate-900 border border-white/10 rounded-3xl p-6 w-full max-w-sm"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "text-center text-slate-300 mb-4"
-  }, "Seleccione el plazo (meses)"), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-3 gap-3 mb-5"
-  }, plazos.map(p => /*#__PURE__*/React.createElement("button", {
-    key: p,
-    onClick: () => onConfirm(p),
-    className: "py-4 rounded-xl bg-white/10 hover:bg-emerald-500 hover:text-slate-900 active:scale-95 text-lg font-semibold"
-  }, p))), /*#__PURE__*/React.createElement("button", {
-    onClick: onCancel,
-    className: "w-full py-3 rounded-xl bg-white/5 hover:bg-white/10"
-  }, "Cancelar")));
+    className: "absolute inset-0 bg-gradient-to-br from-orange-200/60 to-amber-100/40 rounded-[40px] blur-2xl"
+  }), /*#__PURE__*/React.createElement(PhoneMock, {
+    className: "phone-back",
+    style: {
+      left: "8%",
+      top: "18%",
+      transform: "rotate(-8deg) scale(.92)"
+    }
+  }), /*#__PURE__*/React.createElement(PhoneMock, {
+    className: "phone-front",
+    style: {
+      right: "6%",
+      top: "0%",
+      transform: "rotate(6deg)"
+    }
+  }))), /*#__PURE__*/React.createElement("section", {
+    id: "beneficios",
+    className: "bg-white/70 py-14"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "max-w-6xl mx-auto px-5 sm:px-8"
+  }, /*#__PURE__*/React.createElement("h2", {
+    className: "text-2xl sm:text-3xl font-black text-slate-900 text-center"
+  }, "Beneficios que te hacen feliz"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-8 grid sm:grid-cols-2 lg:grid-cols-4 gap-5"
+  }, beneficios.map(b => /*#__PURE__*/React.createElement("div", {
+    key: b.t,
+    className: "rounded-3xl bg-white shadow-sm border border-slate-100 p-6"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-3xl"
+  }, b.i), /*#__PURE__*/React.createElement("div", {
+    className: "mt-3 font-bold text-slate-900"
+  }, b.t), /*#__PURE__*/React.createElement("div", {
+    className: "mt-1 text-sm text-slate-600"
+  }, b.d)))))), /*#__PURE__*/React.createElement("section", {
+    id: "como",
+    className: "py-14"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "max-w-6xl mx-auto px-5 sm:px-8"
+  }, /*#__PURE__*/React.createElement("h2", {
+    className: "text-2xl sm:text-3xl font-black text-slate-900 text-center"
+  }, "\xBFC\xF3mo funciona?"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-8 grid sm:grid-cols-3 gap-5"
+  }, pasos.map(p => /*#__PURE__*/React.createElement("div", {
+    key: p.n,
+    className: "rounded-3xl bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-100 p-6"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-10 h-10 rounded-full bg-orange-600 text-white font-black flex items-center justify-center"
+  }, p.n), /*#__PURE__*/React.createElement("div", {
+    className: "mt-3 font-bold text-slate-900"
+  }, p.t), /*#__PURE__*/React.createElement("div", {
+    className: "mt-1 text-sm text-slate-600"
+  }, p.d)))))), /*#__PURE__*/React.createElement("section", {
+    id: "pagos",
+    className: "bg-white/70 py-14"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "max-w-6xl mx-auto px-5 sm:px-8 text-center"
+  }, /*#__PURE__*/React.createElement("h2", {
+    className: "text-2xl sm:text-3xl font-black text-slate-900"
+  }, "Paga donde quieras"), /*#__PURE__*/React.createElement("p", {
+    className: "mt-2 text-slate-600"
+  }, "M\xE1s de ", /*#__PURE__*/React.createElement("b", {
+    className: "text-orange-600"
+  }, "15,000 puntos de pago"), " y en l\xEDnea desde la app HappyPay."), /*#__PURE__*/React.createElement("div", {
+    className: "mt-7 flex flex-wrap justify-center gap-3"
+  }, canales.map(c => /*#__PURE__*/React.createElement("span", {
+    key: c,
+    className: "rounded-full bg-white shadow-sm border border-slate-100 px-4 py-2 text-sm font-semibold text-slate-700"
+  }, c))), /*#__PURE__*/React.createElement("div", {
+    className: "mt-8 max-w-2xl mx-auto text-sm text-slate-500 bg-amber-50 border border-amber-100 rounded-2xl p-4"
+  }, "Si te atrasas en un pago, el equipo se bloquea autom\xE1ticamente (solo emergencias y servicio al cliente) hasta ponerte al d\xEDa. Al pagar, se reactiva."))), /*#__PURE__*/React.createElement("footer", {
+    className: "py-10 text-center text-xs text-slate-400"
+  }, "HappyPay Ecuador \xB7 Demo con asistente virtual Kolega \xB7 Informaci\xF3n referencial, sujeta a verificaci\xF3n."));
 }
+
+/* ============================== TARJETA DE PRE-EVALUACIÓN ============================== */
+
 function EvalCard({
   evalData
 }) {
@@ -577,29 +674,32 @@ function EvalCard({
     result
   } = evalData;
   return /*#__PURE__*/React.createElement("div", {
-    className: "w-full max-w-md bg-white/10 border border-emerald-400/40 rounded-2xl p-4 mb-3 text-sm"
+    className: "w-full bg-orange-50 border border-orange-200 rounded-2xl p-3 mb-2 text-sm"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between mb-1"
+    className: "flex justify-between"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-slate-300"
-  }, "Monto"), /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-500"
+  }, "Celular"), /*#__PURE__*/React.createElement("span", {
     className: "font-semibold"
   }, "$", input.monto_usd)), /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between mb-1"
+    className: "flex justify-between"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-slate-300"
+    className: "text-slate-500"
   }, "Plazo"), /*#__PURE__*/React.createElement("span", {
     className: "font-semibold"
   }, input.plazo_meses, " meses")), /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between mb-2"
+    className: "flex justify-between"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-slate-300"
-  }, "Cuota estimada"), /*#__PURE__*/React.createElement("span", {
-    className: "font-bold text-emerald-400"
-  }, "$", result.cuota_estimada, "/mes")), /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] text-center text-amber-300 bg-amber-500/10 rounded-lg py-1.5 px-2 uppercase tracking-wide"
-  }, "Pre-evaluaci\xF3n referencial \u2014 sujeta a verificaci\xF3n con un ejecutivo"));
+    className: "text-slate-500"
+  }, "Cuota semanal"), /*#__PURE__*/React.createElement("span", {
+    className: "font-bold text-orange-600"
+  }, "$", result.cuota_estimada_semanal)), /*#__PURE__*/React.createElement("div", {
+    className: "mt-1 text-[10px] text-center text-amber-700 bg-amber-100 rounded-lg py-1 px-2 uppercase tracking-wide"
+  }, "Pre-evaluaci\xF3n referencial \u2014 sujeta a verificaci\xF3n"));
 }
+
+/* ============================== PANEL ADMIN ============================== */
+
 function AdminPanel({
   config,
   setConfig,
@@ -635,7 +735,7 @@ function AdminPanel({
       }));
       onClose();
     } catch (e) {
-      setError("El JSON de políticas no es válido: " + e.message);
+      setError("El JSON de política no es válido: " + e.message);
     }
   };
   const exportJSON = () => {
@@ -678,13 +778,13 @@ function AdminPanel({
   }]);
   const removeFaqItem = i => setFaq(f => f.filter((_, idx) => idx !== i));
   return /*#__PURE__*/React.createElement("div", {
-    className: "fixed inset-0 z-40 bg-black/80 flex items-center justify-center p-4"
+    className: "fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-slate-900 border border-white/10 rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto no-scrollbar p-6"
+    className: "bg-white text-slate-800 border border-slate-200 rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto no-scrollbar p-6 shadow-2xl"
   }, !unlocked ? /*#__PURE__*/React.createElement("div", {
-    className: "max-w-xs mx-auto text-center py-8"
+    className: "max-w-xs mx-auto text-center py-6"
   }, /*#__PURE__*/React.createElement("h2", {
-    className: "text-xl font-semibold mb-4"
+    className: "text-xl font-bold mb-4"
   }, "Panel de administraci\xF3n"), /*#__PURE__*/React.createElement("input", {
     type: "password",
     inputMode: "numeric",
@@ -692,95 +792,95 @@ function AdminPanel({
     value: pinInput,
     onChange: e => setPinInput(e.target.value.replace(/\D/g, "")),
     placeholder: "PIN de 6 d\xEDgitos",
-    className: "w-full text-center text-2xl tracking-widest bg-white/10 rounded-xl py-3 mb-3 outline-none",
+    className: "w-full text-center text-2xl tracking-widest bg-slate-100 rounded-xl py-3 mb-3 outline-none",
     autoFocus: true
   }), error && /*#__PURE__*/React.createElement("p", {
-    className: "text-red-400 text-sm mb-3"
+    className: "text-red-500 text-sm mb-3"
   }, error), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-3"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: onClose,
-    className: "flex-1 py-3 rounded-xl bg-white/5"
+    className: "flex-1 py-3 rounded-xl bg-slate-100"
   }, "Cancelar"), /*#__PURE__*/React.createElement("button", {
     onClick: tryUnlock,
-    className: "flex-1 py-3 rounded-xl bg-emerald-500 text-slate-900 font-semibold"
+    className: "flex-1 py-3 rounded-xl bg-orange-600 text-white font-semibold"
   }, "Entrar"))) : /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "flex justify-between items-center mb-4"
   }, /*#__PURE__*/React.createElement("h2", {
-    className: "text-xl font-semibold"
+    className: "text-xl font-bold"
   }, "Panel de administraci\xF3n"), /*#__PURE__*/React.createElement("button", {
     onClick: onClose,
-    className: "text-slate-400 hover:text-white text-2xl leading-none"
+    className: "text-slate-400 hover:text-slate-700 text-2xl leading-none"
   }, "\xD7")), /*#__PURE__*/React.createElement("div", {
-    className: "grid sm:grid-cols-2 gap-3 mb-5 bg-white/5 rounded-2xl p-4"
+    className: "grid sm:grid-cols-2 gap-3 mb-5 bg-slate-50 rounded-2xl p-4"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    className: "block text-xs text-slate-400 mb-1"
+    className: "block text-xs text-slate-500 mb-1"
   }, "Voz (SpeechSynthesis)"), /*#__PURE__*/React.createElement("select", {
     value: voiceURI,
     onChange: e => setVoiceURI(e.target.value),
-    className: "w-full bg-black/30 rounded-lg px-2 py-2 text-sm"
+    className: "w-full bg-white border border-slate-200 rounded-lg px-2 py-2 text-sm"
   }, /*#__PURE__*/React.createElement("option", {
     value: ""
   }, "Autom\xE1tica (es-US / es-MX / es-419)"), voices.map(v => /*#__PURE__*/React.createElement("option", {
     key: v.voiceURI,
     value: v.voiceURI
   }, v.name, " (", v.lang, ")")))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    className: "block text-xs text-slate-400 mb-1"
-  }, "API key Anthropic (solo respaldo directo desde el navegador)"), /*#__PURE__*/React.createElement("input", {
+    className: "block text-xs text-slate-500 mb-1"
+  }, "API key Anthropic (respaldo directo)"), /*#__PURE__*/React.createElement("input", {
     type: "password",
     value: apiKey,
     onChange: e => setApiKey(e.target.value),
-    placeholder: "sk-ant-... (opcional si hay backend /api/chat)",
-    className: "w-full bg-black/30 rounded-lg px-2 py-2 text-sm"
+    placeholder: "sk-ant-... (opcional)",
+    className: "w-full bg-white border border-slate-200 rounded-lg px-2 py-2 text-sm"
   }))), /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-2 mb-4 border-b border-white/10 pb-2"
-  }, [["politicas", "Políticas de crédito"], ["convenios", "Convenios y pagos"], ["faq", "FAQ"]].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
+    className: "flex gap-2 mb-4 border-b border-slate-200 pb-2"
+  }, [["politicas", "Política"], ["convenios", "Pagos"], ["faq", "FAQ"]].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
     key: id,
     onClick: () => setTab(id),
-    className: `px-3 py-2 rounded-lg text-sm ${tab === id ? "bg-emerald-500 text-slate-900 font-semibold" : "bg-white/5"}`
+    className: `px-3 py-2 rounded-lg text-sm ${tab === id ? "bg-orange-600 text-white font-semibold" : "bg-slate-100"}`
   }, label))), tab === "politicas" && /*#__PURE__*/React.createElement("textarea", {
     value: policiesText,
     onChange: e => setPoliciesText(e.target.value),
     spellCheck: false,
-    className: "w-full h-64 bg-black/30 rounded-xl p-3 font-mono text-xs outline-none"
+    className: "w-full h-64 bg-slate-50 border border-slate-200 rounded-xl p-3 font-mono text-xs outline-none"
   }), tab === "convenios" && /*#__PURE__*/React.createElement("textarea", {
     value: convenios,
     onChange: e => setConvenios(e.target.value),
-    className: "w-full h-64 bg-black/30 rounded-xl p-3 text-sm outline-none"
+    className: "w-full h-64 bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none"
   }), tab === "faq" && /*#__PURE__*/React.createElement("div", {
     className: "space-y-3 max-h-64 overflow-y-auto no-scrollbar pr-1"
   }, faq.map((item, i) => /*#__PURE__*/React.createElement("div", {
     key: i,
-    className: "bg-black/30 rounded-xl p-3"
+    className: "bg-slate-50 border border-slate-200 rounded-xl p-3"
   }, /*#__PURE__*/React.createElement("input", {
     value: item.pregunta,
     onChange: e => updateFaqItem(i, "pregunta", e.target.value),
     placeholder: "Pregunta",
-    className: "w-full bg-white/5 rounded-lg px-2 py-1.5 text-sm mb-2 outline-none"
+    className: "w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-sm mb-2 outline-none"
   }), /*#__PURE__*/React.createElement("textarea", {
     value: item.respuesta,
     onChange: e => updateFaqItem(i, "respuesta", e.target.value),
     placeholder: "Respuesta",
-    className: "w-full bg-white/5 rounded-lg px-2 py-1.5 text-sm outline-none"
+    className: "w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-sm outline-none"
   }), /*#__PURE__*/React.createElement("button", {
     onClick: () => removeFaqItem(i),
-    className: "text-xs text-red-400 mt-1"
+    className: "text-xs text-red-500 mt-1"
   }, "Eliminar"))), /*#__PURE__*/React.createElement("button", {
     onClick: addFaqItem,
-    className: "text-sm text-emerald-400"
+    className: "text-sm text-orange-600"
   }, "+ Agregar pregunta")), error && /*#__PURE__*/React.createElement("p", {
-    className: "text-red-400 text-sm mt-3"
+    className: "text-red-500 text-sm mt-3"
   }, error), /*#__PURE__*/React.createElement("div", {
     className: "flex flex-wrap gap-3 mt-5"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: save,
-    className: "flex-1 py-3 rounded-xl bg-emerald-500 text-slate-900 font-semibold min-w-[140px]"
+    className: "flex-1 py-3 rounded-xl bg-orange-600 text-white font-semibold min-w-[140px]"
   }, "Guardar y aplicar"), /*#__PURE__*/React.createElement("button", {
     onClick: exportJSON,
-    className: "py-3 px-4 rounded-xl bg-white/10"
+    className: "py-3 px-4 rounded-xl bg-slate-100"
   }, "Exportar JSON"), /*#__PURE__*/React.createElement("button", {
     onClick: () => fileInputRef.current.click(),
-    className: "py-3 px-4 rounded-xl bg-white/10"
+    className: "py-3 px-4 rounded-xl bg-slate-100"
   }, "Importar JSON"), /*#__PURE__*/React.createElement("input", {
     ref: fileInputRef,
     type: "file",
@@ -790,18 +890,17 @@ function AdminPanel({
   })))));
 }
 
-/* ============================== APP ============================== */
+/* ============================== WIDGET KOLEGA (voz) ============================== */
 
-const IDLE_TIMEOUT_MS = 60000;
-function App() {
-  const [screen, setScreen] = useState("bienvenida"); // bienvenida | chat
-  const [avatarState, setAvatarState] = useState("reposo"); // reposo | escuchando | pensando | hablando
+function KolegaWidget() {
+  const [open, setOpen] = useState(false);
+  const [convoActive, setConvoActive] = useState(false);
+  const [avatarState, setAvatarState] = useState("reposo");
   const [viseme, setViseme] = useState("closed");
   const [isBlinking, setIsBlinking] = useState(false);
-  const [subtitle, setSubtitle] = useState("¡Buenos días! Bienvenido a HappyPay. ¿En qué le puedo ayudar hoy?");
-  const [messages, setMessages] = useState([]); // historial para la API
+  const [subtitle, setSubtitle] = useState("¡Hola! Soy Kolega. Toca «Conversar» y hablemos de tu celular a crédito.");
+  const [messages, setMessages] = useState([]);
   const [listening, setListening] = useState(false);
-  const [keypadRequest, setKeypadRequest] = useState(null); // "monto" | "plazo" | "ingreso" | null
   const [evalData, setEvalData] = useState(null);
   const [adminOpen, setAdminOpen] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -816,11 +915,15 @@ function App() {
   const [voices, setVoices] = useState([]);
   const recognitionRef = useRef(null);
   const visemeTimerRef = useRef(null);
-  const idleTimerRef = useRef(null);
   const blinkTimerRef = useRef(null);
+  const convoActiveRef = useRef(false);
+  const busyRef = useRef(false);
   const systemPrompt = useMemo(() => buildSystemPrompt(config.policies, config.convenios, config.faq), [config]);
+  useEffect(() => {
+    convoActiveRef.current = convoActive;
+  }, [convoActive]);
 
-  /* ---- Blink loop ---- */
+  /* Parpadeo */
   useEffect(() => {
     function scheduleBlink() {
       const delay = 4000 + Math.random() * 2000;
@@ -834,7 +937,7 @@ function App() {
     return () => clearTimeout(blinkTimerRef.current);
   }, []);
 
-  /* ---- Voices ---- */
+  /* Voces */
   useEffect(() => {
     function loadVoices() {
       const all = window.speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith("es"));
@@ -848,36 +951,63 @@ function App() {
       const v = voices.find(v => v.voiceURI === voiceURI);
       if (v) return v;
     }
-    const preferred = voices.find(v => /es-us|es-mx|es-419/i.test(v.lang)) || voices[0];
-    return preferred || null;
+    return voices.find(v => /es-us|es-mx|es-419/i.test(v.lang)) || voices[0] || null;
   }, [voices, voiceURI]);
-
-  /* ---- Inactivity reset ---- */
-  const resetIdleTimer = useCallback(() => {
-    clearTimeout(idleTimerRef.current);
-    idleTimerRef.current = setTimeout(() => {
-      window.speechSynthesis.cancel();
-      if (recognitionRef.current) recognitionRef.current.stop();
-      setMessages([]);
-      setEvalData(null);
-      setKeypadRequest(null);
-      setScreen("bienvenida");
-      setAvatarState("reposo");
-      setSubtitle("¡Buenos días! Bienvenido a HappyPay. ¿En qué le puedo ayudar hoy?");
-    }, IDLE_TIMEOUT_MS);
+  const startListening = useCallback(() => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+      setSubtitle("Este navegador no soporta reconocimiento de voz. Use Google Chrome.");
+      return;
+    }
+    if (busyRef.current) return;
+    try {
+      recognitionRef.current && recognitionRef.current.stop();
+    } catch (e) {}
+    const rec = new SR();
+    rec.lang = "es-EC";
+    rec.continuous = false;
+    rec.interimResults = true;
+    rec.onstart = () => {
+      setListening(true);
+      setAvatarState("escuchando");
+    };
+    rec.onresult = e => {
+      let finalText = "",
+        interim = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) finalText += t;else interim += t;
+      }
+      if (finalText.trim()) {
+        try {
+          rec.stop();
+        } catch (er) {}
+        setListening(false);
+        sendTurn(finalText.trim());
+      } else if (interim) setSubtitle(interim);
+    };
+    rec.onerror = () => {
+      setListening(false);
+      if (avatarStateSafe() !== "hablando") setAvatarState("reposo");
+    };
+    rec.onend = () => {
+      setListening(false);
+    };
+    recognitionRef.current = rec;
+    try {
+      rec.start();
+    } catch (e) {}
   }, []);
-  useEffect(() => {
-    resetIdleTimer();
-    return () => clearTimeout(idleTimerRef.current);
-  }, [resetIdleTimer, screen, messages]);
-
-  /* ---- Speak with viseme lip-sync ---- */
-  const speak = useCallback(text => {
+  function avatarStateSafe() {
+    return busyRef.current ? "hablando" : "reposo";
+  }
+  const speak = useCallback((text, thenListen) => {
     window.speechSynthesis.cancel();
     clearInterval(visemeTimerRef.current);
     if (!text) {
       setAvatarState("reposo");
       setViseme("closed");
+      if (thenListen && convoActiveRef.current) startListening();
       return;
     }
     const utter = new SpeechSynthesisUtterance(text);
@@ -888,47 +1018,22 @@ function App() {
     utter.onstart = () => {
       setAvatarState("hablando");
       visemeTimerRef.current = setInterval(() => {
-        setViseme(VISEMES[Math.floor(Math.random() * (VISEMES.length - 1)) + 1]); // evita "closed" mientras habla
+        setViseme(VISEMES[Math.floor(Math.random() * (VISEMES.length - 1)) + 1]);
       }, 130);
     };
-    utter.onboundary = () => {
-      setViseme(Math.random() > 0.5 ? "open" : "o");
-    };
+    utter.onboundary = () => setViseme(Math.random() > 0.5 ? "open" : "o");
     const stop = () => {
       clearInterval(visemeTimerRef.current);
       setViseme("closed");
       setAvatarState("reposo");
+      if (thenListen && convoActiveRef.current) setTimeout(() => startListening(), 350);
     };
     utter.onend = stop;
     utter.onerror = stop;
     window.speechSynthesis.speak(utter);
-  }, [pickVoice]);
-
-  /* ---- Marker parsing ---- */
-  function parseMarkers(text) {
-    let keypad = null;
-    let clean = text;
-    if (/\[TECLADO:monto\]/i.test(text)) {
-      keypad = "monto";
-      clean = clean.replace(/\[TECLADO:monto\]/gi, "");
-    } else if (/\[TECLADO:plazo\]/i.test(text)) {
-      keypad = "plazo";
-      clean = clean.replace(/\[TECLADO:plazo\]/gi, "");
-    } else if (/\[TECLADO:ingreso\]/i.test(text)) {
-      keypad = "ingreso";
-      clean = clean.replace(/\[TECLADO:ingreso\]/gi, "");
-    }
-    return {
-      clean: clean.trim(),
-      keypad
-    };
-  }
-
-  /* ---- Send a user turn to the brain ---- */
+  }, [pickVoice, startListening]);
   const sendTurn = useCallback(async userText => {
-    resetIdleTimer();
-    setScreen("chat");
-    setKeypadRequest(null);
+    busyRef.current = true;
     setSubtitle(userText);
     setAvatarState("pensando");
     setErrorMsg("");
@@ -939,130 +1044,112 @@ function App() {
     setMessages(newHistory);
     try {
       const {
-        replyText,
         finalMessages,
+        replyText,
         lastEval
       } = await runBrainTurn(newHistory, systemPrompt, config.policies, apiKey);
       if (lastEval) setEvalData(lastEval);
-      const {
-        clean,
-        keypad
-      } = parseMarkers(replyText);
       setMessages(finalMessages);
-      setSubtitle(clean);
-      if (keypad) setKeypadRequest(keypad);
-      speak(clean);
+      setSubtitle(replyText);
+      busyRef.current = false;
+      speak(replyText, true);
     } catch (err) {
-      setAvatarState("reposo");
-      const msg = "No pude conectarme en este momento. Por favor intente nuevamente o hable con un ejecutivo.";
+      busyRef.current = false;
+      const msg = "No pude conectarme en este momento. Intente nuevamente o hable con un asesor.";
       setSubtitle(msg);
       setErrorMsg(err.message || String(err));
-      speak(msg);
+      setAvatarState("reposo");
+      speak(msg, false);
     }
-  }, [messages, systemPrompt, config.policies, apiKey, speak, resetIdleTimer]);
-
-  /* ---- Speech recognition ---- */
-  const toggleListening = useCallback(() => {
-    resetIdleTimer();
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) {
-      setSubtitle("Este navegador no soporta reconocimiento de voz. Use Google Chrome.");
-      return;
-    }
-    if (listening) {
+  }, [messages, systemPrompt, config.policies, apiKey, speak]);
+  const startConversation = () => {
+    setConvoActive(true);
+    convoActiveRef.current = true;
+    const saludo = "¡Hola! Bienvenido a HappyPay, soy Kolega. ¿Le ayudo a llevar su celular a crédito hoy?";
+    setSubtitle(saludo);
+    speak(saludo, true);
+  };
+  const stopConversation = () => {
+    setConvoActive(false);
+    convoActiveRef.current = false;
+    window.speechSynthesis.cancel();
+    try {
       recognitionRef.current && recognitionRef.current.stop();
-      setListening(false);
-      setAvatarState("reposo");
-      return;
-    }
-    const rec = new SR();
-    rec.lang = "es-EC";
-    rec.continuous = true;
-    rec.interimResults = true;
-    rec.onstart = () => {
-      setListening(true);
-      setAvatarState("escuchando");
-    };
-    rec.onresult = e => {
-      resetIdleTimer();
-      let finalText = "";
-      let interim = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        const t = e.results[i][0].transcript;
-        if (e.results[i].isFinal) finalText += t;else interim += t;
-      }
-      if (finalText.trim()) {
-        rec.stop();
-        setListening(false);
-        sendTurn(finalText.trim());
-      } else if (interim) {
-        setSubtitle(interim);
-      }
-    };
-    rec.onerror = () => {
-      setListening(false);
-      setAvatarState("reposo");
-    };
-    rec.onend = () => {
-      setListening(false);
-      setAvatarState(a => a === "escuchando" ? "reposo" : a);
-    };
-    recognitionRef.current = rec;
-    rec.start();
-  }, [listening, sendTurn, resetIdleTimer]);
-  const handleKeypadConfirm = value => {
-    const labels = {
-      monto: "Monto deseado",
-      plazo: "Plazo",
-      ingreso: "Ingreso mensual"
-    };
-    setKeypadRequest(null);
-    sendTurn(`${labels[keypadRequest]}: ${value}${keypadRequest !== "plazo" ? " USD" : " meses"}`);
+    } catch (e) {}
+    setListening(false);
+    setAvatarState("reposo");
+    setSubtitle("Conversación terminada. Toca «Conversar» cuando quieras seguir.");
   };
   const showEvalCard = evalData && evalData.result.cumple;
-  return /*#__PURE__*/React.createElement("div", {
-    className: "h-full w-full flex flex-col items-center justify-between px-4 py-6 relative overflow-hidden"
+  return /*#__PURE__*/React.createElement(React.Fragment, null, !open && /*#__PURE__*/React.createElement("button", {
+    onClick: () => setOpen(true),
+    className: "fixed z-40 bottom-5 right-5 flex items-center gap-2 rounded-full bg-orange-600 text-white pl-2 pr-4 py-2 shadow-2xl hover:bg-orange-500 active:scale-95 transition"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-11 h-11 rounded-full bg-white/15 flex items-center justify-center overflow-hidden"
+  }, /*#__PURE__*/React.createElement(AvatarSVG, {
+    state: "reposo",
+    viseme: "closed",
+    isBlinking: isBlinking,
+    size: 62
+  })), /*#__PURE__*/React.createElement("span", {
+    className: "font-bold text-sm"
+  }, "Habla con Kolega")), open && /*#__PURE__*/React.createElement("div", {
+    className: "fixed z-40 bottom-4 right-4 left-4 sm:left-auto sm:w-[370px] bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-gradient-to-r from-orange-600 to-amber-500 text-white px-4 py-3 flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-extrabold"
+  }, "Kolega"), /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] bg-white/20 rounded-full px-2 py-0.5"
+  }, "HappyPay")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-1"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setAdminOpen(true),
-    className: "absolute top-4 right-4 w-9 h-9 rounded-full bg-white/5 hover:bg-white/15 flex items-center justify-center text-lg opacity-60 hover:opacity-100",
+    className: "w-8 h-8 rounded-full hover:bg-white/15 flex items-center justify-center",
     "aria-label": "Administraci\xF3n"
-  }, "\u2699"), /*#__PURE__*/React.createElement("div", {
-    className: "flex flex-col items-center gap-1 mt-4"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-emerald-400 font-extrabold text-2xl tracking-tight"
-  }, "Kolega"), /*#__PURE__*/React.createElement("span", {
-    className: "text-slate-400 text-xs uppercase tracking-widest"
-  }, "HappyPay Ecuador")), /*#__PURE__*/React.createElement("div", {
-    className: "flex-1 flex items-center justify-center w-full"
+  }, "\u2699"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      stopConversation();
+      setOpen(false);
+    },
+    className: "w-8 h-8 rounded-full hover:bg-white/15 flex items-center justify-center text-xl leading-none",
+    "aria-label": "Cerrar"
+  }, "\xD7"))), /*#__PURE__*/React.createElement("div", {
+    className: "px-4 pt-3 pb-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-center"
   }, /*#__PURE__*/React.createElement(AvatarSVG, {
     state: avatarState,
     viseme: viseme,
-    isBlinking: isBlinking
+    isBlinking: isBlinking,
+    size: 150
   })), /*#__PURE__*/React.createElement("div", {
-    className: "w-full max-w-lg text-center mb-4 min-h-[3.5rem] px-2"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "text-lg sm:text-xl font-medium leading-snug"
-  }, subtitle)), showEvalCard && /*#__PURE__*/React.createElement(EvalCard, {
+    className: "mt-1 min-h-[3.2rem] text-center text-[15px] leading-snug text-slate-700 px-1"
+  }, subtitle), showEvalCard && /*#__PURE__*/React.createElement("div", {
+    className: "mt-2"
+  }, /*#__PURE__*/React.createElement(EvalCard, {
     evalData: evalData
-  }), screen === "bienvenida" && /*#__PURE__*/React.createElement(QuickActions, {
-    onPick: sendTurn,
-    disabled: listening
-  }), /*#__PURE__*/React.createElement("button", {
-    onClick: toggleListening,
-    className: `relative mt-5 mb-2 w-full max-w-xs py-4 rounded-full font-semibold text-slate-900 transition active:scale-95 ${listening ? "bg-red-400 mic-pulse" : "bg-emerald-400 hover:bg-emerald-300"}`
-  }, listening ? "Escuchando… toque para detener" : "🎙 Toca para hablar"), keypadRequest === "monto" && /*#__PURE__*/React.createElement(NumericKeypad, {
-    label: "Monto deseado (USD)",
-    onConfirm: handleKeypadConfirm,
-    onCancel: () => setKeypadRequest(null)
-  }), keypadRequest === "ingreso" && /*#__PURE__*/React.createElement(NumericKeypad, {
-    label: "Ingreso mensual (USD)",
-    onConfirm: handleKeypadConfirm,
-    onCancel: () => setKeypadRequest(null)
-  }), keypadRequest === "plazo" && /*#__PURE__*/React.createElement(PlazoChips, {
-    plazos: config.policies.plazos_meses,
-    onConfirm: handleKeypadConfirm,
-    onCancel: () => setKeypadRequest(null)
-  }), adminOpen && /*#__PURE__*/React.createElement(AdminPanel, {
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "mt-3"
+  }, !convoActive ? /*#__PURE__*/React.createElement("button", {
+    onClick: startConversation,
+    className: "w-full py-3 rounded-full bg-orange-600 hover:bg-orange-500 text-white font-bold active:scale-95 transition"
+  }, "\uD83C\uDF99 Conversar por voz") : /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => startListening(),
+    disabled: listening || avatarState === "hablando",
+    className: `flex-1 py-3 rounded-full font-bold text-white active:scale-95 transition ${listening ? "bg-red-500 mic-pulse" : "bg-orange-600 hover:bg-orange-500 disabled:opacity-50"}`
+  }, listening ? "Escuchando…" : avatarState === "hablando" ? "Kolega habla…" : "🎙 Hablar"), /*#__PURE__*/React.createElement("button", {
+    onClick: stopConversation,
+    className: "px-4 py-3 rounded-full bg-slate-100 text-slate-600 font-semibold active:scale-95"
+  }, "Terminar"))), /*#__PURE__*/React.createElement("div", {
+    className: "mt-2 text-center text-[11px] text-slate-400"
+  }, "Conversaci\xF3n por voz \xB7 informaci\xF3n referencial"), errorMsg && /*#__PURE__*/React.createElement("div", {
+    className: "mt-1 text-[10px] text-red-400 text-center truncate"
+  }, errorMsg))), adminOpen && /*#__PURE__*/React.createElement(AdminPanel, {
     config: config,
     setConfig: setConfig,
     apiKey: apiKey,
@@ -1071,9 +1158,15 @@ function App() {
     setVoiceURI: setVoiceURI,
     voices: voices,
     onClose: () => setAdminOpen(false)
-  }), errorMsg && /*#__PURE__*/React.createElement("div", {
-    className: "absolute bottom-1 left-1 text-[10px] text-red-400/70 max-w-[90%] truncate"
-  }, errorMsg));
+  }));
+}
+
+/* ============================== APP ============================== */
+
+function App() {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "relative"
+  }, /*#__PURE__*/React.createElement(Landing, null), /*#__PURE__*/React.createElement(KolegaWidget, null));
 }
 ReactDOM.createRoot(document.getElementById("root")).render(/*#__PURE__*/React.createElement(App, null));
 </script>
