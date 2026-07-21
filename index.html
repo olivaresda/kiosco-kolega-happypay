@@ -810,15 +810,31 @@ function AdminPanel({
     accept: "image/*",
     onChange: onPhoto,
     className: "hidden"
-  })), /*#__PURE__*/React.createElement("label", {
-    className: "flex items-center gap-2 mt-3 text-sm text-slate-600"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "mt-4"
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "block text-xs text-slate-500 mb-2"
+  }, "Modo de voz del avatar"), /*#__PURE__*/React.createElement("div", {
+    className: "grid gap-2"
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "flex items-start gap-2 rounded-xl border p-3 cursor-pointer text-sm " + (!videoEnabled ? "border-orange-500 bg-orange-50" : "border-slate-200 bg-white")
   }, /*#__PURE__*/React.createElement("input", {
-    type: "checkbox",
+    type: "radio",
+    name: "voiceMode",
+    className: "mt-0.5",
+    checked: !videoEnabled,
+    onChange: () => setVideoEnabled(false)
+  }), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", null, "Voz normal"), " \u2014 la foto animada de Kolega habla con la voz del navegador (gratis, sin video).")), /*#__PURE__*/React.createElement("label", {
+    className: "flex items-start gap-2 rounded-xl border p-3 cursor-pointer text-sm " + (videoEnabled ? "border-orange-500 bg-orange-50" : "border-slate-200 bg-white")
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "radio",
+    name: "voiceMode",
+    className: "mt-0.5",
     checked: videoEnabled,
-    onChange: e => setVideoEnabled(e.target.checked)
-  }), "Avatar de ", /*#__PURE__*/React.createElement("b", null, "video en tiempo real (D-ID)"), " \u2014 la foto habla con lip-sync"), /*#__PURE__*/React.createElement("p", {
+    onChange: () => setVideoEnabled(true)
+  }), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", null, "Voz del avatar en video (D-ID)"), " \u2014 la foto cobra vida y habla con lip-sync en tiempo real. Consume minutos de tu cuenta D-ID; si falla o se agota, cae autom\xE1ticamente a la voz normal.")))), /*#__PURE__*/React.createElement("p", {
     className: "mt-2 text-[11px] text-slate-400"
-  }, "La foto se guarda y queda fija para todos. El modo video usa D-ID (consume minutos de tu cuenta); si falla o se agota, cae a la foto animada + voz.")), /*#__PURE__*/React.createElement("div", {
+  }, "La foto se guarda y queda fija para todos. Solo se usa un modo de voz a la vez: el que elijas aqu\xED.")), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2 mb-4 border-b border-slate-200 pb-2"
   }, [["politicas", "Política"], ["convenios", "Pagos"], ["faq", "FAQ"]].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
     key: id,
