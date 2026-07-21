@@ -64,6 +64,38 @@ const PROXY_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIs
 
 // Foto de Kolega (figura humana). Se puede reemplazar aquí (data URI o URL) o desde el panel admin.
 const KOLEGA_PHOTO = "";
+const SUPA_REST = "https://lllyjmnbgegbbetgrmvq.supabase.co/rest/v1";
+async function loadKolegaPhoto() {
+  try {
+    const r = await fetch(`${SUPA_REST}/app_config?id=eq.1&select=kolega_photo`, {
+      headers: {
+        apikey: PROXY_KEY,
+        authorization: "Bearer " + PROXY_KEY
+      }
+    });
+    if (!r.ok) return null;
+    const rows = await r.json();
+    return rows && rows[0] && rows[0].kolega_photo ? rows[0].kolega_photo : null;
+  } catch (e) {
+    return null;
+  }
+}
+async function saveKolegaPhoto(dataUri) {
+  try {
+    await fetch(`${SUPA_REST}/app_config?id=eq.1`, {
+      method: "PATCH",
+      headers: {
+        apikey: PROXY_KEY,
+        authorization: "Bearer " + PROXY_KEY,
+        "content-type": "application/json",
+        Prefer: "return=minimal"
+      },
+      body: JSON.stringify({
+        kolega_photo: dataUri
+      })
+    });
+  } catch (e) {}
+}
 const DEFAULT_POLICIES = {
   precio_minimo_usd: 100,
   precio_maximo_usd: 2000,
@@ -686,11 +718,17 @@ function AdminPanel({
     };
     reader.readAsText(file);
   };
+  const [savingPhoto, setSavingPhoto] = useState(false);
   const onPhoto = e => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = ev => setPhotoUrl(ev.target.result);
+    reader.onload = async ev => {
+      setPhotoUrl(ev.target.result);
+      setSavingPhoto(true);
+      await saveKolegaPhoto(ev.target.result);
+      setSavingPhoto(false);
+    };
     reader.readAsDataURL(file);
   };
   const updateFaqItem = (i, field, value) => setFaq(f => f.map((item, idx) => idx === i ? {
@@ -774,8 +812,11 @@ function AdminPanel({
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => photoInputRef.current.click(),
     className: "py-2 px-3 rounded-lg bg-orange-600 text-white text-sm font-semibold"
-  }, "Subir foto"), photoUrl && /*#__PURE__*/React.createElement("button", {
-    onClick: () => setPhotoUrl(""),
+  }, savingPhoto ? "Guardando…" : "Subir foto"), photoUrl && /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setPhotoUrl("");
+      saveKolegaPhoto(null);
+    },
     className: "py-2 px-3 rounded-lg bg-slate-100 text-sm"
   }, "Quitar")), /*#__PURE__*/React.createElement("input", {
     ref: photoInputRef,
@@ -785,7 +826,7 @@ function AdminPanel({
     className: "hidden"
   })), /*#__PURE__*/React.createElement("p", {
     className: "mt-2 text-[11px] text-slate-400"
-  }, "La foto se usa como avatar. En esta demo se mantiene en memoria; para dejarla fija en la p\xE1gina, env\xEDamela y la incrusto por defecto.")), /*#__PURE__*/React.createElement("div", {
+  }, "La foto se guarda y queda fija como avatar de Kolega para todos los que abran la p\xE1gina.")), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2 mb-4 border-b border-slate-200 pb-2"
   }, [["politicas", "Política"], ["convenios", "Pagos"], ["faq", "FAQ"]].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
     key: id,
@@ -872,6 +913,13 @@ function KolegaWidget() {
   useEffect(() => {
     convoActiveRef.current = convoActive;
   }, [convoActive]);
+
+  // Carga la foto guardada de Kolega (persistida en Supabase)
+  useEffect(() => {
+    loadKolegaPhoto().then(p => {
+      if (p) setPhotoUrl(p);
+    });
+  }, []);
   useEffect(() => {
     function loadVoices() {
       const all = window.speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith("es"));
