@@ -19,18 +19,16 @@
   }
   .no-scrollbar::-webkit-scrollbar{display:none;}
 
-  @keyframes breathing{ 0%,100%{ transform:translateY(0) scale(1);} 50%{ transform:translateY(-2px) scale(1.006);} }
-  .avatar-breathe{ animation:breathing 4.2s ease-in-out infinite; transform-origin:center bottom; }
+  @keyframes breathing{ 0%,100%{ transform:translateY(0) scale(1);} 50%{ transform:translateY(-2px) scale(1.012);} }
+  .avatar-photo{ animation:breathing 4.6s ease-in-out infinite; transform-origin:center; }
+  @keyframes ringPulse{ 0%,100%{ opacity:.55; } 50%{ opacity:1; } }
+  .avatar-ring-active{ animation:ringPulse 1.4s ease-in-out infinite; }
   @keyframes bounceDot{ 0%,80%,100%{ transform:translateY(0); opacity:.5;} 40%{ transform:translateY(-5px); opacity:1;} }
   .think-dot{ animation:bounceDot 1.1s ease-in-out infinite; }
   @keyframes waveBar{ 0%,100%{ transform:scaleY(.3);} 50%{ transform:scaleY(1);} }
-  .wave-bar{ animation:waveBar .9s ease-in-out infinite; transform-origin:center; }
+  .wave-bar{ animation:waveBar .8s ease-in-out infinite; transform-origin:bottom; }
   @keyframes pulseRing{ 0%{ box-shadow:0 0 0 0 rgba(239,68,68,.5);} 100%{ box-shadow:0 0 0 16px rgba(239,68,68,0);} }
   .mic-pulse{ animation:pulseRing 1.4s ease-out infinite; }
-  .eye-lid{ transition:transform .09s ease-in-out; transform-origin:center; }
-  .head-group{ transition:transform .5s cubic-bezier(.4,0,.2,1); transform-origin:150px 190px; }
-  .pupil{ transition:transform .35s ease; }
-  .viseme{ transition:opacity .07s linear; }
 
   /* Mockup de teléfono */
   .phone-frame{
@@ -63,11 +61,14 @@ const {
 const ADMIN_PIN_DEFAULT = "254800";
 const PROXY_URL = "https://lllyjmnbgegbbetgrmvq.supabase.co/functions/v1/chat";
 const PROXY_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxsbHlqbW5iZ2VnYmJldGdybXZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ2NDA4MjIsImV4cCI6MjEwMDIxNjgyMn0.LiKzwHYLgSUZxpe06n4U6OqPErkEN2JRVGULedeSCk8";
+
+// Foto de Kolega (figura humana). Se puede reemplazar aquí (data URI o URL) o desde el panel admin.
+const KOLEGA_PHOTO = "";
 const DEFAULT_POLICIES = {
   precio_minimo_usd: 100,
   precio_maximo_usd: 2000,
-  plazos_meses: [3, 6, 9, 12, 18, 24, 32],
-  tasa_mensual_pct: 3.5,
+  plazos_semanas: [8, 16, 24, 36, 52, 72, 104, 139],
+  tasa_semanal_pct: 0.9,
   ingreso_minimo_usd: 300,
   ratio_cuota_ingreso_max: 0.40,
   requisitos: ["Cédula vigente"]
@@ -79,8 +80,8 @@ const DEFAULT_FAQ = [{
   pregunta: "¿Qué necesito para comprar mi celular a crédito?",
   respuesta: "Solo tu cédula. Sin garante y sin trámites bancarios complicados; la aprobación es rápida, en unos 30 minutos."
 }, {
-  pregunta: "¿En cuánto tiempo puedo pagar?",
-  respuesta: "En cuotas semanales, con plazos flexibles de hasta 32 meses."
+  pregunta: "¿Cada cuánto pago?",
+  respuesta: "Las cuotas son semanales, con plazos flexibles de hasta 139 semanas."
 }, {
   pregunta: "¿Dónde puedo pagar?",
   respuesta: "En más de 15,000 puntos de pago (Servipagos, Western Union, Red Facilito, PagoÁgil, Tía, Banco del Barrio, Mi Vecino) o en línea desde la app HappyPay."
@@ -93,7 +94,7 @@ const DEFAULT_FAQ = [{
 }];
 const EVALUAR_CREDITO_TOOL = {
   name: "evaluar_credito",
-  description: "Estima la cuota referencial para financiar un celular a crédito en HappyPay y verifica si encaja con la política vigente. Usa amortización francesa con la tasa cargada.",
+  description: "Estima la cuota SEMANAL referencial para financiar un celular a crédito en HappyPay y verifica si encaja con la política vigente. Usa amortización con tasa semanal.",
   input_schema: {
     type: "object",
     properties: {
@@ -101,16 +102,16 @@ const EVALUAR_CREDITO_TOOL = {
         type: "number",
         description: "Precio aproximado del celular en dólares."
       },
-      plazo_meses: {
+      plazo_semanas: {
         type: "integer",
-        description: "Plazo en meses (hasta 32)."
+        description: "Plazo en SEMANAS (hasta 139)."
       },
       ingreso_mensual_usd: {
         type: "number",
         description: "Ingreso mensual aproximado del cliente en dólares."
       }
     },
-    required: ["monto_usd", "plazo_meses", "ingreso_mensual_usd"]
+    required: ["monto_usd", "plazo_semanas", "ingreso_mensual_usd"]
   }
 };
 function buildSystemPrompt(policies, convenios, faq) {
@@ -120,12 +121,12 @@ function buildSystemPrompt(policies, convenios, faq) {
 Lo que sabes y ofreces:
 - Compra de celular a crédito con aprobación rápida (en unos 30 minutos), en Quito y todo el Ecuador.
 - Solo se necesita la cédula; sin garante y sin trámites bancarios complicados.
-- Cuotas semanales, plazos flexibles hasta 32 meses.
+- IMPORTANTE: las cuotas y los plazos son SEMANALES. El plazo se mide en SEMANAS (hasta 139 semanas). Nunca hables de "meses"; habla siempre en semanas y de la cuota semanal.
 - Beneficios incluidos: telemedicina y odontología gratis, y 15% de descuento en farmacias económicas y Medicity. La cuota más baja del mercado.
 - Más de 15,000 puntos de pago y pago en línea desde la app HappyPay. Canales: Servipagos, Western Union, Red Facilito, PagoÁgil, Tía, Banco del Barrio y Mi Vecino.
 - Si un pago no se realiza en su fecha, el equipo se bloquea automáticamente por la plataforma HappyPay (solo llamadas de emergencia y servicio al cliente) hasta ponerse al día; al pagar se reactiva.
 
-Simulación de crédito: si el cliente quiere simular, pregunta primero el precio aproximado del celular y en cuántos meses desea pagar (hasta 32); si hace falta, pregunta su ingreso mensual aproximado. Con esos datos llama a la herramienta evaluar_credito. Presenta SIEMPRE la cuota como PRE-EVALUACIÓN REFERENCIAL sujeta a verificación. Nunca digas "aprobado" ni "rechazado"; si no cuadra, ofrece un celular de menor precio, un plazo mayor, o pasar con un asesor.
+Simulación de crédito: si el cliente quiere simular, pregunta primero el precio aproximado del celular y en cuántas SEMANAS desea pagar (hasta 139); si hace falta, pregunta su ingreso mensual aproximado. Con esos datos llama a la herramienta evaluar_credito. Presenta SIEMPRE la cuota semanal como PRE-EVALUACIÓN REFERENCIAL sujeta a verificación. Nunca digas "aprobado" ni "rechazado"; si no cuadra, ofrece un celular de menor precio, un plazo mayor en semanas, o pasar con un asesor.
 
 Atención y cobranza: usa "ponerse al día", "facilidades", "opciones"; prohibido "moroso" o lenguaje que avergüence. Ante molestia, valida y ofrece hablar con un asesor.
 
@@ -145,33 +146,33 @@ ${faqText}`;
 function evaluarCredito(input, policies) {
   const {
     monto_usd,
-    plazo_meses,
+    plazo_semanas,
     ingreso_mensual_usd
   } = input;
-  const i = policies.tasa_mensual_pct / 100;
-  const n = plazo_meses;
+  const i = policies.tasa_semanal_pct / 100;
+  const n = plazo_semanas;
   const factor = Math.pow(1 + i, n);
-  const cuota = monto_usd * (i * factor) / (factor - 1);
-  const cuota_semanal = cuota / 4.33;
+  const cuota_semanal = monto_usd * (i * factor) / (factor - 1);
+  const cuota_mensual = cuota_semanal * 4.33;
   const motivos = [];
   if (!(monto_usd >= policies.precio_minimo_usd && monto_usd <= policies.precio_maximo_usd)) {
     motivos.push(`El precio debe estar entre $${policies.precio_minimo_usd} y $${policies.precio_maximo_usd}.`);
   }
-  if (!policies.plazos_meses.includes(plazo_meses)) {
-    motivos.push(`El plazo debe ser uno de: ${policies.plazos_meses.join(", ")} meses.`);
+  if (!policies.plazos_semanas.includes(plazo_semanas)) {
+    motivos.push(`El plazo debe ser uno de: ${policies.plazos_semanas.join(", ")} semanas.`);
   }
   if (!(ingreso_mensual_usd >= policies.ingreso_minimo_usd)) {
     motivos.push(`El ingreso mensual mínimo referencial es $${policies.ingreso_minimo_usd}.`);
   }
-  const ratio = cuota / ingreso_mensual_usd;
+  const ratio = cuota_mensual / ingreso_mensual_usd;
   if (ratio > policies.ratio_cuota_ingreso_max) {
     motivos.push(`La cuota representaría ${(ratio * 100).toFixed(0)}% del ingreso, sobre el máximo referencial de ${(policies.ratio_cuota_ingreso_max * 100).toFixed(0)}%.`);
   }
   const cumple = motivos.length === 0;
   return {
     cumple,
-    cuota_estimada_mensual: Number.isFinite(cuota) ? Number(cuota.toFixed(2)) : null,
     cuota_estimada_semanal: Number.isFinite(cuota_semanal) ? Number(cuota_semanal.toFixed(2)) : null,
+    plazo_semanas,
     motivo: cumple ? "Encaja con la política referencial vigente." : motivos.join(" ")
   };
 }
@@ -256,201 +257,115 @@ async function runBrainTurn(history, systemPrompt, policies, apiKey) {
   };
 }
 
-/* ============================== AVATAR SVG ============================== */
+/* ============================== AVATAR (figura humana / foto) ============================== */
 
-const VISEMES = ["closed", "semi", "open", "o", "e"];
-function AvatarSVG({
+function SilhouetteAdult() {
+  return /*#__PURE__*/React.createElement("svg", {
+    viewBox: "0 0 200 200",
+    className: "w-full h-full"
+  }, /*#__PURE__*/React.createElement("defs", null, /*#__PURE__*/React.createElement("linearGradient", {
+    id: "silbg",
+    x1: "0",
+    y1: "0",
+    x2: "0",
+    y2: "1"
+  }, /*#__PURE__*/React.createElement("stop", {
+    offset: "0%",
+    stopColor: "#1F2937"
+  }), /*#__PURE__*/React.createElement("stop", {
+    offset: "100%",
+    stopColor: "#0F172A"
+  }))), /*#__PURE__*/React.createElement("rect", {
+    width: "200",
+    height: "200",
+    fill: "url(#silbg)"
+  }), /*#__PURE__*/React.createElement("g", {
+    fill: "#64748B"
+  }, /*#__PURE__*/React.createElement("circle", {
+    cx: "100",
+    cy: "78",
+    r: "34"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M40,190 C40,140 70,120 100,120 C130,120 160,140 160,190 Z"
+  })));
+}
+function Avatar({
   state,
-  viseme,
-  isBlinking,
+  photoUrl,
   size
 }) {
   const listening = state === "escuchando";
   const thinking = state === "pensando";
   const speaking = state === "hablando";
-  const headTiltDeg = listening ? -7 : 0;
-  const pupilOffsetY = thinking ? -5 : 0;
+  const ringColor = listening ? "#F97316" : speaking ? "#22C55E" : thinking ? "#F59E0B" : "rgba(15,23,42,.12)";
+  const active = listening || speaking || thinking;
   return /*#__PURE__*/React.createElement("div", {
-    className: "relative flex items-center justify-center"
-  }, /*#__PURE__*/React.createElement("svg", {
-    viewBox: "0 0 300 400",
+    className: "relative flex items-center justify-center",
     style: {
-      width: size || 180,
-      height: "auto",
-      filter: "drop-shadow(0 10px 22px rgba(0,0,0,.18))"
-    },
-    className: "avatar-breathe"
-  }, /*#__PURE__*/React.createElement("defs", null, /*#__PURE__*/React.createElement("linearGradient", {
-    id: "bodyGrad",
-    x1: "0",
-    y1: "0",
-    x2: "0",
-    y2: "1"
-  }, /*#__PURE__*/React.createElement("stop", {
-    offset: "0%",
-    stopColor: "#FF7A3D"
-  }), /*#__PURE__*/React.createElement("stop", {
-    offset: "100%",
-    stopColor: "#E8551B"
-  })), /*#__PURE__*/React.createElement("linearGradient", {
-    id: "hairGrad",
-    x1: "0",
-    y1: "0",
-    x2: "0",
-    y2: "1"
-  }, /*#__PURE__*/React.createElement("stop", {
-    offset: "0%",
-    stopColor: "#3B2A22"
-  }), /*#__PURE__*/React.createElement("stop", {
-    offset: "100%",
-    stopColor: "#241814"
-  }))), /*#__PURE__*/React.createElement("path", {
-    d: "M60,400 C60,300 90,255 150,255 C210,255 240,300 240,400 Z",
-    fill: "url(#bodyGrad)"
-  }), /*#__PURE__*/React.createElement("rect", {
-    x: "130",
-    y: "230",
-    width: "40",
-    height: "45",
-    rx: "14",
-    fill: "#F0BE9A"
-  }), /*#__PURE__*/React.createElement("path", {
-    d: "M120,260 L150,282 L180,260 L180,278 L150,300 L120,278 Z",
-    fill: "#FFC53D",
-    opacity: "0.95"
-  }), /*#__PURE__*/React.createElement("g", {
-    className: "head-group",
-    style: {
-      transform: `rotate(${headTiltDeg}deg)`
+      width: size,
+      height: size
     }
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M85,150 C85,95 110,60 150,60 C190,60 215,95 215,150 C215,120 195,100 150,100 C105,100 85,120 85,150 Z",
-    fill: "url(#hairGrad)"
-  }), /*#__PURE__*/React.createElement("ellipse", {
-    cx: "150",
-    cy: "155",
-    rx: "66",
-    ry: "76",
-    fill: "#F0BE9A"
-  }), /*#__PURE__*/React.createElement("path", {
-    d: "M86,140 C86,92 112,64 150,64 C188,64 214,92 214,140 C205,110 182,96 150,96 C118,96 95,110 86,140 Z",
-    fill: "url(#hairGrad)"
-  }), /*#__PURE__*/React.createElement("path", {
-    d: thinking ? "M110,118 Q122,110 134,116" : "M110,122 Q122,116 134,122",
-    stroke: "#3B2A22",
-    strokeWidth: "4",
-    fill: "none",
-    strokeLinecap: "round"
-  }), /*#__PURE__*/React.createElement("path", {
-    d: thinking ? "M166,116 Q178,110 190,118" : "M166,122 Q178,116 190,122",
-    stroke: "#3B2A22",
-    strokeWidth: "4",
-    fill: "none",
-    strokeLinecap: "round"
-  }), /*#__PURE__*/React.createElement("g", {
-    className: "eye-lid",
+  }, /*#__PURE__*/React.createElement("div", {
+    className: active ? "avatar-ring-active" : "",
     style: {
-      transform: isBlinking ? "scaleY(0.06)" : "scaleY(1)"
+      position: "absolute",
+      inset: -6,
+      borderRadius: "9999px",
+      boxShadow: `0 0 0 3px ${ringColor}`
     }
-  }, /*#__PURE__*/React.createElement("ellipse", {
-    cx: "122",
-    cy: "140",
-    rx: "13",
-    ry: "15",
-    fill: "#FFFFFF"
-  }), /*#__PURE__*/React.createElement("ellipse", {
-    cx: "178",
-    cy: "140",
-    rx: "13",
-    ry: "15",
-    fill: "#FFFFFF"
-  }), /*#__PURE__*/React.createElement("circle", {
-    className: "pupil",
-    cx: "122",
-    cy: 140 + pupilOffsetY,
-    r: "6",
-    fill: "#2A2320",
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "avatar-photo relative rounded-full overflow-hidden bg-slate-800",
     style: {
-      transform: `translateY(${pupilOffsetY}px)`
+      width: size,
+      height: size,
+      boxShadow: "0 12px 28px -10px rgba(2,6,23,.45)"
     }
-  }), /*#__PURE__*/React.createElement("circle", {
-    className: "pupil",
-    cx: "178",
-    cy: 140 + pupilOffsetY,
-    r: "6",
-    fill: "#2A2320",
+  }, photoUrl ? /*#__PURE__*/React.createElement("img", {
+    src: photoUrl,
+    alt: "Kolega",
+    className: "w-full h-full object-cover",
     style: {
-      transform: `translateY(${pupilOffsetY}px)`
+      objectPosition: "center 22%"
     }
-  })), /*#__PURE__*/React.createElement("ellipse", {
-    cx: "106",
-    cy: "172",
-    rx: "10",
-    ry: "6",
-    fill: "#F2907A",
-    opacity: "0.4"
-  }), /*#__PURE__*/React.createElement("ellipse", {
-    cx: "194",
-    cy: "172",
-    rx: "10",
-    ry: "6",
-    fill: "#F2907A",
-    opacity: "0.4"
-  }), /*#__PURE__*/React.createElement("g", {
-    transform: "translate(150,192)"
-  }, /*#__PURE__*/React.createElement("rect", {
-    className: "viseme",
-    x: "-16",
-    y: "-2",
-    width: "32",
-    height: "4",
-    rx: "2",
-    fill: "#8A4B3B",
+  }) : /*#__PURE__*/React.createElement(SilhouetteAdult, null), speaking && /*#__PURE__*/React.createElement("div", {
+    className: "absolute inset-0",
     style: {
-      opacity: viseme === "closed" ? 1 : 0
+      background: "radial-gradient(circle at 50% 85%, rgba(34,197,94,.18), transparent 60%)"
     }
-  }), /*#__PURE__*/React.createElement("ellipse", {
-    className: "viseme",
-    rx: "16",
-    ry: "6",
-    fill: "#7A3B2C",
+  }), listening && /*#__PURE__*/React.createElement("div", {
+    className: "absolute inset-0",
     style: {
-      opacity: viseme === "semi" ? 1 : 0
+      background: "radial-gradient(circle at 50% 85%, rgba(249,115,22,.18), transparent 60%)"
     }
-  }), /*#__PURE__*/React.createElement("ellipse", {
-    className: "viseme",
-    rx: "18",
-    ry: "15",
-    fill: "#7A3B2C",
+  })), speaking && /*#__PURE__*/React.createElement("div", {
+    className: "absolute left-1/2 -translate-x-1/2 flex items-end gap-1 h-5",
     style: {
-      opacity: viseme === "open" ? 1 : 0
+      bottom: -14
     }
-  }), /*#__PURE__*/React.createElement("circle", {
-    className: "viseme",
-    r: "12",
-    fill: "#7A3B2C",
-    style: {
-      opacity: viseme === "o" ? 1 : 0
-    }
-  }), /*#__PURE__*/React.createElement("ellipse", {
-    className: "viseme",
-    rx: "24",
-    ry: "7",
-    fill: "#7A3B2C",
-    style: {
-      opacity: viseme === "e" ? 1 : 0
-    }
-  })))), listening && /*#__PURE__*/React.createElement("div", {
-    className: "absolute -right-1 top-4 flex items-end gap-1 h-7"
-  }, [0, 1, 2, 3].map(i => /*#__PURE__*/React.createElement("div", {
+  }, [0, 1, 2, 3, 4].map(i => /*#__PURE__*/React.createElement("div", {
     key: i,
-    className: "wave-bar w-1.5 rounded-full bg-orange-500",
+    className: "wave-bar w-1 rounded-full bg-emerald-500",
+    style: {
+      height: "100%",
+      animationDelay: `${i * 0.1}s`
+    }
+  }))), listening && /*#__PURE__*/React.createElement("div", {
+    className: "absolute left-1/2 -translate-x-1/2 flex items-end gap-1 h-5",
+    style: {
+      bottom: -14
+    }
+  }, [0, 1, 2, 3, 4].map(i => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    className: "wave-bar w-1 rounded-full bg-orange-500",
     style: {
       height: "100%",
       animationDelay: `${i * 0.12}s`
     }
   }))), thinking && /*#__PURE__*/React.createElement("div", {
-    className: "absolute -right-2 top-3 flex gap-1.5"
+    className: "absolute left-1/2 -translate-x-1/2 flex gap-1.5",
+    style: {
+      bottom: -12
+    }
   }, [0, 1, 2].map(i => /*#__PURE__*/React.createElement("div", {
     key: i,
     className: "think-dot w-2 h-2 rounded-full bg-amber-500",
@@ -495,7 +410,7 @@ function PhoneMock({
     className: "text-[10px] text-slate-500"
   }, "Plazo"), /*#__PURE__*/React.createElement("div", {
     className: "text-slate-900 font-bold text-sm"
-  }, "32 meses"))), /*#__PURE__*/React.createElement("div", {
+  }, "104 semanas"))), /*#__PURE__*/React.createElement("div", {
     className: "mt-2 h-2 rounded-full bg-slate-100 overflow-hidden"
   }, /*#__PURE__*/React.createElement("div", {
     className: "h-full bg-gradient-to-r from-orange-400 to-amber-400",
@@ -516,7 +431,7 @@ function Landing() {
     i: "🪪"
   }, {
     t: "Cuotas semanales",
-    d: "Plazos flexibles hasta 32 meses, la cuota más baja.",
+    d: "Plazos flexibles hasta 139 semanas, la cuota más baja.",
     i: "📅"
   }, {
     t: "Salud incluida",
@@ -534,7 +449,7 @@ function Landing() {
   }, {
     n: "2",
     t: "Cotiza tu celular",
-    d: "Elige el equipo y el plazo que más te convenga."
+    d: "Elige el equipo y las semanas que más te convengan."
   }, {
     n: "3",
     t: "Aprobación rápida",
@@ -574,7 +489,7 @@ function Landing() {
     className: "text-orange-600"
   }, "cuotas m\xE1s bajas"), " del Ecuador"), /*#__PURE__*/React.createElement("p", {
     className: "mt-4 text-lg text-slate-600 max-w-md"
-  }, "Aprobaci\xF3n r\xE1pida en unos 30 minutos, sin garante y solo con tu c\xE9dula. Cuotas semanales hasta 32 meses."), /*#__PURE__*/React.createElement("div", {
+  }, "Aprobaci\xF3n r\xE1pida en unos 30 minutos, sin garante y solo con tu c\xE9dula. Cuotas semanales hasta 139 semanas."), /*#__PURE__*/React.createElement("div", {
     className: "mt-6 flex flex-wrap gap-3"
   }, /*#__PURE__*/React.createElement("span", {
     className: "rounded-full bg-white shadow-sm border border-slate-100 px-4 py-2 text-sm font-semibold text-slate-700"
@@ -687,7 +602,7 @@ function EvalCard({
     className: "text-slate-500"
   }, "Plazo"), /*#__PURE__*/React.createElement("span", {
     className: "font-semibold"
-  }, input.plazo_meses, " meses")), /*#__PURE__*/React.createElement("div", {
+  }, result.plazo_semanas, " semanas")), /*#__PURE__*/React.createElement("div", {
     className: "flex justify-between"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-slate-500"
@@ -708,6 +623,8 @@ function AdminPanel({
   voiceURI,
   setVoiceURI,
   voices,
+  photoUrl,
+  setPhotoUrl,
   onClose
 }) {
   const [pinInput, setPinInput] = useState("");
@@ -718,6 +635,7 @@ function AdminPanel({
   const [faq, setFaq] = useState(config.faq);
   const [error, setError] = useState("");
   const fileInputRef = useRef(null);
+  const photoInputRef = useRef(null);
   const tryUnlock = () => {
     if (pinInput === config.pin) {
       setUnlocked(true);
@@ -768,6 +686,13 @@ function AdminPanel({
     };
     reader.readAsText(file);
   };
+  const onPhoto = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => setPhotoUrl(ev.target.result);
+    reader.readAsDataURL(file);
+  };
   const updateFaqItem = (i, field, value) => setFaq(f => f.map((item, idx) => idx === i ? {
     ...item,
     [field]: value
@@ -812,7 +737,7 @@ function AdminPanel({
     onClick: onClose,
     className: "text-slate-400 hover:text-slate-700 text-2xl leading-none"
   }, "\xD7")), /*#__PURE__*/React.createElement("div", {
-    className: "grid sm:grid-cols-2 gap-3 mb-5 bg-slate-50 rounded-2xl p-4"
+    className: "grid sm:grid-cols-2 gap-3 mb-4 bg-slate-50 rounded-2xl p-4"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "block text-xs text-slate-500 mb-1"
   }, "Voz (SpeechSynthesis)"), /*#__PURE__*/React.createElement("select", {
@@ -833,6 +758,34 @@ function AdminPanel({
     placeholder: "sk-ant-... (opcional)",
     className: "w-full bg-white border border-slate-200 rounded-lg px-2 py-2 text-sm"
   }))), /*#__PURE__*/React.createElement("div", {
+    className: "mb-5 bg-slate-50 rounded-2xl p-4"
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "block text-xs text-slate-500 mb-2"
+  }, "Foto de Kolega (figura humana)"), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-14 h-14 rounded-full overflow-hidden bg-slate-200 flex-shrink-0"
+  }, photoUrl ? /*#__PURE__*/React.createElement("img", {
+    src: photoUrl,
+    alt: "",
+    className: "w-full h-full object-cover"
+  }) : /*#__PURE__*/React.createElement(SilhouetteAdult, null)), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => photoInputRef.current.click(),
+    className: "py-2 px-3 rounded-lg bg-orange-600 text-white text-sm font-semibold"
+  }, "Subir foto"), photoUrl && /*#__PURE__*/React.createElement("button", {
+    onClick: () => setPhotoUrl(""),
+    className: "py-2 px-3 rounded-lg bg-slate-100 text-sm"
+  }, "Quitar")), /*#__PURE__*/React.createElement("input", {
+    ref: photoInputRef,
+    type: "file",
+    accept: "image/*",
+    onChange: onPhoto,
+    className: "hidden"
+  })), /*#__PURE__*/React.createElement("p", {
+    className: "mt-2 text-[11px] text-slate-400"
+  }, "La foto se usa como avatar. En esta demo se mantiene en memoria; para dejarla fija en la p\xE1gina, env\xEDamela y la incrusto por defecto.")), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2 mb-4 border-b border-slate-200 pb-2"
   }, [["politicas", "Política"], ["convenios", "Pagos"], ["faq", "FAQ"]].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
     key: id,
@@ -842,13 +795,13 @@ function AdminPanel({
     value: policiesText,
     onChange: e => setPoliciesText(e.target.value),
     spellCheck: false,
-    className: "w-full h-64 bg-slate-50 border border-slate-200 rounded-xl p-3 font-mono text-xs outline-none"
+    className: "w-full h-56 bg-slate-50 border border-slate-200 rounded-xl p-3 font-mono text-xs outline-none"
   }), tab === "convenios" && /*#__PURE__*/React.createElement("textarea", {
     value: convenios,
     onChange: e => setConvenios(e.target.value),
-    className: "w-full h-64 bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none"
+    className: "w-full h-56 bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none"
   }), tab === "faq" && /*#__PURE__*/React.createElement("div", {
-    className: "space-y-3 max-h-64 overflow-y-auto no-scrollbar pr-1"
+    className: "space-y-3 max-h-56 overflow-y-auto no-scrollbar pr-1"
   }, faq.map((item, i) => /*#__PURE__*/React.createElement("div", {
     key: i,
     className: "bg-slate-50 border border-slate-200 rounded-xl p-3"
@@ -896,8 +849,6 @@ function KolegaWidget() {
   const [open, setOpen] = useState(false);
   const [convoActive, setConvoActive] = useState(false);
   const [avatarState, setAvatarState] = useState("reposo");
-  const [viseme, setViseme] = useState("closed");
-  const [isBlinking, setIsBlinking] = useState(false);
   const [subtitle, setSubtitle] = useState("¡Hola! Soy Kolega. Toca «Conversar» y hablemos de tu celular a crédito.");
   const [messages, setMessages] = useState([]);
   const [listening, setListening] = useState(false);
@@ -913,31 +864,14 @@ function KolegaWidget() {
   const [apiKey, setApiKey] = useState("");
   const [voiceURI, setVoiceURI] = useState("");
   const [voices, setVoices] = useState([]);
+  const [photoUrl, setPhotoUrl] = useState(KOLEGA_PHOTO);
   const recognitionRef = useRef(null);
-  const visemeTimerRef = useRef(null);
-  const blinkTimerRef = useRef(null);
   const convoActiveRef = useRef(false);
   const busyRef = useRef(false);
   const systemPrompt = useMemo(() => buildSystemPrompt(config.policies, config.convenios, config.faq), [config]);
   useEffect(() => {
     convoActiveRef.current = convoActive;
   }, [convoActive]);
-
-  /* Parpadeo */
-  useEffect(() => {
-    function scheduleBlink() {
-      const delay = 4000 + Math.random() * 2000;
-      blinkTimerRef.current = setTimeout(() => {
-        setIsBlinking(true);
-        setTimeout(() => setIsBlinking(false), 130);
-        scheduleBlink();
-      }, delay);
-    }
-    scheduleBlink();
-    return () => clearTimeout(blinkTimerRef.current);
-  }, []);
-
-  /* Voces */
   useEffect(() => {
     function loadVoices() {
       const all = window.speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith("es"));
@@ -988,7 +922,7 @@ function KolegaWidget() {
     };
     rec.onerror = () => {
       setListening(false);
-      if (avatarStateSafe() !== "hablando") setAvatarState("reposo");
+      if (!busyRef.current) setAvatarState("reposo");
     };
     rec.onend = () => {
       setListening(false);
@@ -998,15 +932,10 @@ function KolegaWidget() {
       rec.start();
     } catch (e) {}
   }, []);
-  function avatarStateSafe() {
-    return busyRef.current ? "hablando" : "reposo";
-  }
   const speak = useCallback((text, thenListen) => {
     window.speechSynthesis.cancel();
-    clearInterval(visemeTimerRef.current);
     if (!text) {
       setAvatarState("reposo");
-      setViseme("closed");
       if (thenListen && convoActiveRef.current) startListening();
       return;
     }
@@ -1015,16 +944,8 @@ function KolegaWidget() {
     if (v) utter.voice = v;
     utter.lang = v ? v.lang : "es-419";
     utter.rate = 1;
-    utter.onstart = () => {
-      setAvatarState("hablando");
-      visemeTimerRef.current = setInterval(() => {
-        setViseme(VISEMES[Math.floor(Math.random() * (VISEMES.length - 1)) + 1]);
-      }, 130);
-    };
-    utter.onboundary = () => setViseme(Math.random() > 0.5 ? "open" : "o");
+    utter.onstart = () => setAvatarState("hablando");
     const stop = () => {
-      clearInterval(visemeTimerRef.current);
-      setViseme("closed");
       setAvatarState("reposo");
       if (thenListen && convoActiveRef.current) setTimeout(() => startListening(), 350);
     };
@@ -1085,12 +1006,11 @@ function KolegaWidget() {
     onClick: () => setOpen(true),
     className: "fixed z-40 bottom-5 right-5 flex items-center gap-2 rounded-full bg-orange-600 text-white pl-2 pr-4 py-2 shadow-2xl hover:bg-orange-500 active:scale-95 transition"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "w-11 h-11 rounded-full bg-white/15 flex items-center justify-center overflow-hidden"
-  }, /*#__PURE__*/React.createElement(AvatarSVG, {
+    className: "w-11 h-11 rounded-full overflow-hidden bg-white/15 flex items-center justify-center"
+  }, /*#__PURE__*/React.createElement(Avatar, {
     state: "reposo",
-    viseme: "closed",
-    isBlinking: isBlinking,
-    size: 62
+    photoUrl: photoUrl,
+    size: 44
   })), /*#__PURE__*/React.createElement("span", {
     className: "font-bold text-sm"
   }, "Habla con Kolega")), open && /*#__PURE__*/React.createElement("div", {
@@ -1117,16 +1037,15 @@ function KolegaWidget() {
     className: "w-8 h-8 rounded-full hover:bg-white/15 flex items-center justify-center text-xl leading-none",
     "aria-label": "Cerrar"
   }, "\xD7"))), /*#__PURE__*/React.createElement("div", {
-    className: "px-4 pt-3 pb-4"
+    className: "px-4 pt-5 pb-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex justify-center"
-  }, /*#__PURE__*/React.createElement(AvatarSVG, {
+  }, /*#__PURE__*/React.createElement(Avatar, {
     state: avatarState,
-    viseme: viseme,
-    isBlinking: isBlinking,
+    photoUrl: photoUrl,
     size: 150
   })), /*#__PURE__*/React.createElement("div", {
-    className: "mt-1 min-h-[3.2rem] text-center text-[15px] leading-snug text-slate-700 px-1"
+    className: "mt-4 min-h-[3.2rem] text-center text-[15px] leading-snug text-slate-700 px-1"
   }, subtitle), showEvalCard && /*#__PURE__*/React.createElement("div", {
     className: "mt-2"
   }, /*#__PURE__*/React.createElement(EvalCard, {
@@ -1157,6 +1076,8 @@ function KolegaWidget() {
     voiceURI: voiceURI,
     setVoiceURI: setVoiceURI,
     voices: voices,
+    photoUrl: photoUrl,
+    setPhotoUrl: setPhotoUrl,
     onClose: () => setAdminOpen(false)
   }));
 }
