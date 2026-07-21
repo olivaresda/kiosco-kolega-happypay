@@ -58,7 +58,7 @@ const {
 
 /* ============================== CONFIG / CONOCIMIENTO ============================== */
 
-const ADMIN_PIN_DEFAULT = "254800";
+const ADMIN_PIN_DEFAULT = "291131";
 const PROXY_URL = "https://lllyjmnbgegbbetgrmvq.supabase.co/functions/v1/chat";
 const PROXY_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxsbHlqbW5iZ2VnYmJldGdybXZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ2NDA4MjIsImV4cCI6MjEwMDIxNjgyMn0.LiKzwHYLgSUZxpe06n4U6OqPErkEN2JRVGULedeSCk8";
 const SUPA_BASE = "https://lllyjmnbgegbbetgrmvq.supabase.co";
@@ -68,9 +68,9 @@ const DID_VOICE = {
   type: "microsoft",
   voice_id: "es-MX-JorgeNeural"
 };
-async function loadKolegaPhoto() {
+async function loadKolegaConfig() {
   try {
-    const r = await fetch(`${SUPA_REST}/app_config?id=eq.1&select=kolega_photo`, {
+    const r = await fetch(`${SUPA_REST}/app_config?id=eq.1&select=kolega_photo,video_enabled`, {
       headers: {
         apikey: PROXY_KEY,
         authorization: "Bearer " + PROXY_KEY
@@ -78,12 +78,17 @@ async function loadKolegaPhoto() {
     });
     if (!r.ok) return null;
     const rows = await r.json();
-    return rows && rows[0] && rows[0].kolega_photo ? rows[0].kolega_photo : null;
+    const row = rows && rows[0];
+    if (!row) return null;
+    return {
+      photo: row.kolega_photo || null,
+      videoEnabled: row.video_enabled !== false
+    };
   } catch (e) {
     return null;
   }
 }
-async function saveKolegaPhoto(url) {
+async function patchKolegaConfig(patch) {
   try {
     await fetch(`${SUPA_REST}/app_config?id=eq.1`, {
       method: "PATCH",
@@ -93,11 +98,19 @@ async function saveKolegaPhoto(url) {
         "content-type": "application/json",
         Prefer: "return=minimal"
       },
-      body: JSON.stringify({
-        kolega_photo: url
-      })
+      body: JSON.stringify(patch)
     });
   } catch (e) {}
+}
+async function saveKolegaPhoto(url) {
+  await patchKolegaConfig({
+    kolega_photo: url
+  });
+}
+async function saveVideoEnabled(v) {
+  await patchKolegaConfig({
+    video_enabled: !!v
+  });
 }
 async function uploadAvatarToStorage(file) {
   const ext = (file.name && file.name.split(".").pop() || "png").toLowerCase();
@@ -823,7 +836,10 @@ function AdminPanel({
     name: "voiceMode",
     className: "mt-0.5",
     checked: !videoEnabled,
-    onChange: () => setVideoEnabled(false)
+    onChange: () => {
+      setVideoEnabled(false);
+      saveVideoEnabled(false);
+    }
   }), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", null, "Voz normal"), " \u2014 la foto animada de Kolega habla con la voz del navegador (gratis, sin video).")), /*#__PURE__*/React.createElement("label", {
     className: "flex items-start gap-2 rounded-xl border p-3 cursor-pointer text-sm " + (videoEnabled ? "border-orange-500 bg-orange-50" : "border-slate-200 bg-white")
   }, /*#__PURE__*/React.createElement("input", {
@@ -831,7 +847,10 @@ function AdminPanel({
     name: "voiceMode",
     className: "mt-0.5",
     checked: videoEnabled,
-    onChange: () => setVideoEnabled(true)
+    onChange: () => {
+      setVideoEnabled(true);
+      saveVideoEnabled(true);
+    }
   }), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", null, "Voz del avatar en video (D-ID)"), " \u2014 la foto cobra vida y habla con lip-sync en tiempo real. Consume minutos de tu cuenta D-ID; si falla o se agota, cae autom\xE1ticamente a la voz normal.")))), /*#__PURE__*/React.createElement("p", {
     className: "mt-2 text-[11px] text-slate-400"
   }, "La foto se guarda y queda fija para todos. Solo se usa un modo de voz a la vez: el que elijas aqu\xED.")), /*#__PURE__*/React.createElement("div", {
@@ -938,8 +957,10 @@ function KolegaWidget() {
     messagesRef.current = messages;
   }, [messages]);
   useEffect(() => {
-    loadKolegaPhoto().then(p => {
-      if (p) setPhotoUrl(p);
+    loadKolegaConfig().then(c => {
+      if (!c) return;
+      if (c.photo) setPhotoUrl(c.photo);
+      setVideoEnabled(c.videoEnabled);
     });
   }, []);
   useEffect(() => {
