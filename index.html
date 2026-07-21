@@ -191,12 +191,16 @@ async function callAnthropic(messages, systemPrompt, apiKey) {
     messages
   };
 
-  // 1) Intenta el proxy serverless propio del despliegue (api/chat.js en Vercel).
+  // 1) Proxy serverless (Supabase Edge Function) que guarda la API key en el servidor.
+  const PROXY_URL = "https://lllyjmnbgegbbetgrmvq.supabase.co/functions/v1/chat";
+  const PROXY_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxsbHlqbW5iZ2VnYmJldGdybXZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ2NDA4MjIsImV4cCI6MjEwMDIxNjgyMn0.LiKzwHYLgSUZxpe06n4U6OqPErkEN2JRVGULedeSCk8";
   try {
-    const r = await fetch("/api/chat", {
+    const r = await fetch(PROXY_URL, {
       method: "POST",
       headers: {
-        "content-type": "application/json"
+        "content-type": "application/json",
+        "apikey": PROXY_KEY,
+        "authorization": "Bearer " + PROXY_KEY
       },
       body: JSON.stringify(body)
     });
@@ -207,7 +211,7 @@ async function callAnthropic(messages, systemPrompt, apiKey) {
     }
   } catch (e) {
     if (!(e instanceof TypeError)) throw e;
-    // TypeError = no había endpoint (ej. archivo abierto localmente); sigue al fallback.
+    // TypeError = no se pudo alcanzar el proxy (ej. archivo abierto localmente); sigue al fallback.
   }
 
   // 2) Fallback: llamada directa desde el navegador con la API key ingresada en el panel admin.
